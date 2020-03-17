@@ -29,7 +29,7 @@ PyJWT==1.7.1
 pymongo==3.10.1
 pyOpenSSL==19.1.0
 python-apt==1.6.5+ubuntu0.2
-PyYAML==3.12
+PyYAML==5.1
 requests==2.23.0
 six==1.14.0
 tqdm==4.41.1
