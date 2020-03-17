@@ -1,0 +1,45 @@
+<html>
+    <head>
+        <title>Task</title>
+        <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+        <script src="//cdn.rawgit.com/vkiryukhin/vkBeautify/master/vkbeautify.js"></script>
+		<script type="text/javascript" src="{{ url_for('static', filename='lib/codemirror.js') }}"></script>
+		<link rel="stylesheet" href="{{ url_for('static', filename='lib/codemirror.css') }}">
+		<script type="text/javascript" src="{{ url_for('static', filename='mode/javascript/javascript.js') }}"></script>
+		<script type="text/javascript" src="{{ url_for('static', filename='mode/xml/xml.js') }}"></script>
+    </head>
+    <body>
+        <h1>Hello!</h1>
+        <div><p>Sheet ID: {{ sheet._id }}</p></div>
+        <!-- section with editable xml -->
+		<div style="border: thin solid black";>
+        	<textarea id="editor">
+				
+			</textarea>
+		</div>
+    </body>
+
+    <script type="text/javascript">
+			function decode(text) {
+			    return text.replace(/&apos;/g, "'")
+			               .replace(/&#34;/g, '"')
+			               .replace(/&gt;/g, '>')
+			               .replace(/&lt;/g, '<')
+			               .replace(/&amp;/g, '&');
+			  };
+
+			try {
+				var xml_text = '{{xml}}'
+				xml_text = decode(xml_text)
+				var myCodeMirror = CodeMirror(function(elt) {
+					editor.parentNode.replaceChild(elt, editor);
+				}, {
+					value: vkbeautify.xml(xml_text),
+					lineNumbers: true
+				});
+			}
+			catch(err) {
+  				console.log(err.message)
+			}
+		</script>
+</html>

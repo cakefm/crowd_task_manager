@@ -1,0 +1,34 @@
+<html>
+    <head>
+    	<style type="text/css">
+		table tr td {
+		    /*width: 50px;*/
+		    /*padding-top: 10px;*/
+		    padding-right: 10px;
+		}
+		</style>
+        <title>Task List</title>
+    </head>
+    <body>
+        <h1>Task List</h1>
+        	<td><a href='upload'>Upload new music score PDF</a></td><br>
+        	<td><a href='upload/url_submit'>Submit new music score URL</a></td>
+        <table>
+        	<tr>
+	        	<td><b>Task Name</b></td>
+				<td><b>Edit MEI</b></td>
+				<td><b>Verify Render</b></td>
+				<td><b>Status</b></td>
+			</tr>
+	        {% for task in tasks %}
+		        <tr>
+		        	<td>{{ task.name }}</td>
+					<td><a href='edit/{{ task.task_id }}'>edit/{{ task.task_id }}</a></td>
+					<td><a href='verify/{{ task.task_id }}'>verify/{{ task.task_id }}</a></td>
+					<td>{{ task.status }}</td>
+				</tr>
+	        {% endfor %}
+        </table>
+    </body>
+</html>
+

@@ -1,0 +1,11 @@
+<html>
+    <head>
+        <title>Sheet List</title>
+    </head>
+    <body>
+        <h1>Sheet List</h1>
+        {% for sheet in sheets %}
+		<div><a href=/results/{{ sheet._id }}>{{ sheet._id }}</a></div>
+        {% endfor %}
+    </body>
+</html>

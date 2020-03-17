@@ -1,0 +1,28 @@
+###### PYTHON ######
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+# Jupyter Notebook
+.ipynb_checkpoints
+# IPython
+profile_default/
+ipython_config.py
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+###### EDITORS ######
+.vscode/
+
+###### SYSTEM ######
+.DS_Store
+settings.yaml
+
+###### LARGE FILES/FOLDERS ######
+pdf_to_mei/measure_detector/2019-04-24_faster-rcnn_inception-resnet-v2.pb
