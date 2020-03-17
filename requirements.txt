@@ -9,7 +9,7 @@ cryptography==2.8
 Deprecated==1.2.7
 distro-info===0.18ubuntu0.18.04.1
 fail2ban==0.10.2
-Flask==0.12.2
+Flask==1.0
 idna==2.9
 itsdangerous==0.24
 Jinja2==2.10
