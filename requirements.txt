@@ -36,6 +36,6 @@ tqdm==4.41.1
 ufw==0.36
 unattended-upgrades==0.1
 urllib3==1.25.8
-Werkzeug==0.14.1
+Werkzeug==0.15.3
 wrapt==1.12.1
 xmldiff==2.4
