@@ -82,12 +82,12 @@ def getXMLofSlice(score, slice_begin_n, slice_end_n):
     # measure_tag_begin = "<measure>"
     # measure_tag_end = "</measure>"
     measure_tag_begin = ""
-    measure_tag_end = "</measure>"
+    measure_tag_end = "></measure>"
     for x in range(slice_begin_n, slice_end_n):
         if(len(mydoc['measures'][x]['xml']) > 0):
             end_xml = end_xml + \
                 measure_tag_begin + \
-                mydoc['measures'][x]['xml'][:-1] + \
+                mydoc['measures'][x]['xml'][:-2] + \
                 measure_tag_end
     return end_xml
 
