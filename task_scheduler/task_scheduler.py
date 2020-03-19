@@ -82,12 +82,12 @@ def getXMLofSlice(score, slice_begin_n, slice_end_n):
     # measure_tag_begin = "<measure>"
     # measure_tag_end = "</measure>"
     measure_tag_begin = ""
-    measure_tag_end = "</measure>"
+    measure_tag_end = "></measure>"
     for x in range(slice_begin_n, slice_end_n):
         if(len(mydoc['measures'][x]['xml']) > 0):
             end_xml = end_xml + \
                 measure_tag_begin + \
-                mydoc['measures'][x]['xml'][:-1] + \
+                mydoc['measures'][x]['xml'][:-2] + \
                 measure_tag_end
     return end_xml
 
@@ -114,13 +114,15 @@ def main():
                 myquery = {"score": score}
                 mydoc = mycol.find(myquery)
                 for measure_slice in mydoc:
-                    task_id = create_task_from_slice(measure_slice)
-                    print(datetime.now(), 'created task ', task_id)
-                    submit_task_to_ce(task_id)
-                    print(
-                        datetime.now(),
-                        'sent message to ce_communicator for ',
-                        task_id)
+                    slice_length = measure_slice['end'] - measure_slice['start']
+                    if(slice_length == 1):
+                        task_id = create_task_from_slice(measure_slice)
+                        print(datetime.now(), 'created task ', task_id)
+                        submit_task_to_ce(task_id)
+                        print(
+                            datetime.now(),
+                            'sent message to ce_communicator for ',
+                            task_id)
     except KeyboardInterrupt:
         print('interrupted')
 
