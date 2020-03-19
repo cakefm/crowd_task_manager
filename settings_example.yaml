@@ -31,3 +31,6 @@ github_commit_count_before_push: 5
 # Other
 ce_server: "https://api-test.trompamusic.eu/"
 current_server: ""
+entrypoint_id: ""
+processing_potentialaction_id: ""
+verify_potentialaction_id: ""

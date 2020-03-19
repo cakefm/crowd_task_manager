@@ -1,9 +1,9 @@
 <html>
     <head>
         <title>Task</title>
-        <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+        <script src="{{url_for('static', filename='lib/jquery.min.js')}}"></script>
         <script src="//cdn.rawgit.com/vkiryukhin/vkBeautify/master/vkbeautify.js"></script>
-        <script src="http://www.verovio.org/javascript/latest/verovio-toolkit.js"></script>
+        <script src="{{url_for('static', filename='lib/verovio-toolkit.js')}}"></script>
         <script src="https://cdn.jsdelivr.net/gh/google/code-prettify@master/loader/run_prettify.js"></script>
         <script>
         	function myFunction(clicked_id) {
