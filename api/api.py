@@ -47,7 +47,7 @@ ALLOWED_EXTENSIONS = {'txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif'}
 MONGO_SERVER = cfg['mongo_server']
 MONGO_DB = cfg['mongo_db']
 TASK_COLL = cfg['mongo_task_collection']
-CLIENT_SECRET = cfg['client_secret']
+# CLIENT_SECRET = cfg['client_secret']
 CURRENT_SERVER = cfg['current_server']
 
 app.config['UPLOAD_FOLDER'] = str(Path.home()) + cfg['upload_folder']

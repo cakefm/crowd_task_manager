@@ -114,13 +114,15 @@ def main():
                 myquery = {"score": score}
                 mydoc = mycol.find(myquery)
                 for measure_slice in mydoc:
-                    task_id = create_task_from_slice(measure_slice)
-                    print(datetime.now(), 'created task ', task_id)
-                    submit_task_to_ce(task_id)
-                    print(
-                        datetime.now(),
-                        'sent message to ce_communicator for ',
-                        task_id)
+                    slice_length = measure_slice['end'] - measure_slice['start']
+                    if(slice_length == 1):
+                        task_id = create_task_from_slice(measure_slice)
+                        print(datetime.now(), 'created task ', task_id)
+                        submit_task_to_ce(task_id)
+                        print(
+                            datetime.now(),
+                            'sent message to ce_communicator for ',
+                            task_id)
     except KeyboardInterrupt:
         print('interrupted')
 

@@ -30,6 +30,9 @@ RABBITMQ_ADDRESS = settings.rabbitmq_address[0]
 RABBITMQ_PORT = settings.rabbitmq_address[1]
 MONGO_SERVER = cfg['mongo_server']
 MONGO_DB = cfg['mongo_db']
+ENTRYPOINT_ID = cfg["entrypoint_id"]
+PROCESSING_POTENTIALACTION_ID = cfg["processing_potentialaction_id"]
+VERIFY_POTENTIALACTION_ID = cfg["verify_potentialaction_id"]
 ALLOWED_EXTENSIONS = {'txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif'}
 UPLOAD_FOLDER = str(Path.home()) + cfg['upload_folder']
 
@@ -130,8 +133,8 @@ def create_controlaction(task_id):
 
     # submit task data to ce
     url = CE_SERVER
-    payload = "{\"query\":\"mutation{\\n  CreateControlAction(\\n    name: \\\"%s\\\",\\n    description: \\\"%s\\\",\\n    url: \\\"%s\\\",\\n    actionStatus: %s \\n  ){\\n    identifier\\n  }\\n}\"}"
-    payload = payload % (name, description, task_url, actionStatus)
+    payload = "{\"query\":\"mutation {\\n   RequestControlAction(\\n       controlAction: {\\n           entryPointIdentifier: \\\"%s\\\"\\n           potentialActionIdentifier: \\\"%s\\\"\\n           potentialAction: {\\n               name: \\\"%s\\\"\\n               url: \\\"%s\\\"\\n           }\\n       }\\n   ) {\\n       identifier\\n   }\\n}\\n\"}"
+    payload = payload % (ENTRYPOINT_ID, PROCESSING_POTENTIALACTION_ID, name, task_url)
     headers = headers = {'content-type': 'application/json'}
     response = requests.request("POST", url, data=payload, headers=headers)
     data = json.loads(response.text)
