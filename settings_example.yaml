@@ -5,6 +5,7 @@ mongo_slice_collection: "slices"
 mongo_score_collection: "scores"
 mongo_sheet_collection: "sheets"
 mongo_aggregated_result_collection: "results_agg"
+mongo_result_collection: "results"
 mongo_task_collection: "tasks"
 
 # Rabbit MQ
@@ -13,6 +14,7 @@ mq_new_item_queue: "measure_detector_queue"
 mq_sheet_queue: "sheet_queue"
 mq_score_queue: "score_queue"
 mq_score_rebuilder_queue: "score_rebuilder_queue"
+mq_aggregator_queue: "aggregator_queue"
 mq_github_init_queue: "github_init_queue"
 mq_github_queue: "github_queue"
 

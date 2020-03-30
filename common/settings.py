@@ -11,7 +11,7 @@ with open("../settings.yaml", "r") as file:
     config = yaml.safe_load(file.read())
 
 base_sheet_path = Path(config["base_sheet_path"]) # Can just use the "/" operator with Path
-mongo_address = re.search('[a-zA-Z]+:[0-9]+', config["mongo_server"]).group(0).split(":") # [ip, port]
+mongo_address = re.search('([a-zA-Z]|[0-9]|\.)+:[0-9]+', config["mongo_server"]).group(0).split(":") # [ip, port]
 rabbitmq_address = config["rabbitmq_address"].split(":") # [ip, port] 
 score_queue_name = config["mq_score_queue"]
 sheet_queue_name = config["mq_sheet_queue"]
@@ -29,3 +29,5 @@ github_init_queue_name = config["mq_github_init_queue"]
 github_branch_name = config["github_branch"]
 github_commit_count_before_push = int(config["github_commit_count_before_push"])
 task_collection_name = config["mongo_task_collection"]
+result_collection_name = config["mongo_result_collection"]
+aggregator_queue_name = config["mq_aggregator_queue"]
