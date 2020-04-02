@@ -1,12 +1,13 @@
 import xml.dom.minidom as xml
 import numpy as np
 
+def create_gap_element():
+    return xml.parseString("<t/>").createElement("gap")
+
 # Needleman Wunsch algorithm implementation for sequences of XML nodes
 # Algorithm based on psuedocode with modifications at: https://en.wikipedia.org/wiki/Needleman%E2%80%93Wunsch_algorithm
 def align_xml(A, B, similarity_function, gap_penalty = 10):
     # padding and re-referencing
-    def create_gap_element():
-        return xml.parseString("<t/>").createElement("gap")
 
     A = A + [create_gap_element() for x in range(max(0, len(B)-len(A)))]
     B = B + [create_gap_element() for x in range(max(0, len(A)-len(B)))]
@@ -103,8 +104,32 @@ def align_trees_rec(tree1, tree2):
             
     return score, n
 
-# API method
 # For now, nothing is done with the count, but it could be used to calculate a mean node distance
 def align_trees(tree1, tree2):
     score, n = align_trees_rec(tree1, tree2)
     return score
+
+def gap_paths(tree, path, paths):
+    nodes = [node for node in tree.childNodes if node.nodeType == xml.Node.ELEMENT_NODE]
+    if nodes:
+        for i, node in enumerate(tree.childNodes):
+            if node.nodeType == xml.Node.ELEMENT_NODE and node.tagName == 'gap':
+                paths.append(path + [i])
+            gap_paths(node, path + [i], paths)
+    return paths
+
+def gap_insert(tree, path):
+    nodes = [node for node in tree.childNodes if node.nodeType == xml.Node.ELEMENT_NODE]
+    if nodes:
+        # Create additional gaps if necessary
+        while path[0] >= len(tree.childNodes):
+            tree.childNodes.append(create_gap_element())
+        if len(path) == 1:
+            new_nodes = list(tree.childNodes)
+            new_nodes.insert(path[0], create_gap_element())
+            tree.childNodes = new_nodes
+        gap_insert(tree.childNodes[path[0]], path[1:])
+
+def copy_gaps(tree1, tree2):
+    for path in gap_paths(tree1, [], []):
+        gap_insert(tree2, path)

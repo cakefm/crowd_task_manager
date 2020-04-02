@@ -43,6 +43,87 @@ def callback(ch, method, properties, body):
     main_tree_index = np.argmin(distance_bins)
 
 
+    # Use the pairwise alignments with a heuristic to come up with a multiple alignment solution
+    mas = []
+    candidate_pairs = sorted([(i, j) for i, j in pairs if main_tree_index in (i, j)], key = lambda t : distances[t[0], t[1]])
+    closest_pair_index = candidate_pairs[0]
+    closest_pair = pairs[closest_pair_index]
+    mas.append(closest_pair[closest_pair_index.index(main_tree_index)])
+    mas.append(closest_pair[not closest_pair_index.index(main_tree_index)])
+    for pair_index in candidate_pairs[1:]:
+        pair = pairs[pair_index]
+        main_tree = pair[pair_index.index(main_tree_index)]
+        cand_tree = pair[not pair_index.index(main_tree_index)]
+
+        print(f"ITERATION {candidate_pairs.index(pair_index)}:")
+        print("===MAIN:")
+        print(main_tree.toprettyxml())
+        print("===CAND:")
+        print(cand_tree.toprettyxml())
+        print()
+
+        # Copy the gaps
+        for tree in mas:
+            tad.copy_gaps(main_tree, tree)
+
+        mas.append(cand_tree)
+
+        print("===RESULT SO FAR:")
+        for tree in mas:
+            print(tree.toprettyxml())
+            print("============")
+
+        print()
+        print()
+        print()
+        print("------------------------------------------------")
+
+
+    # At this point all trees in `mas` have the same structure, thus we can iterate
+    # over the nodes and determine node values through consensus
+
+    def find_best_node(nodes):
+        node_distances = np.full((len(nodes), len(nodes)), np.inf)
+        for i, a in enumerate(nodes):
+            for j, b in enumerate(nodes): 
+                node_distances[i, j] = tad.node_distance(a, b)
+        
+        node_distance_bins = [0] * len(nodes)
+        for i in range(len(nodes)):
+            for j in range(len(nodes)): 
+                node_distance_bins[i] += node_distances[i, j]
+                node_distance_bins[j] += node_distances[i, j]
+
+        return nodes[np.argmin(node_distance_bins)]
+
+
+    def build_tree(trees, new_tree, n):
+        group = zip(*[c.childNodes for c in trees])
+        if group:
+            for nodes in group:
+                best = find_best_node(nodes)
+                if best.tagName == 'gap':
+                    continue
+ 
+                new_node =  tad.create_gap_element()
+                new_node.tagName = best.tagName
+                for key in best.attributes.keys():
+                    new_node.setAttribute(key, best.attributes[key].value)
+                new_tree.childNodes.append(new_node)
+                build_tree(nodes, new_node , n + 1)
+
+
+    consensus_tree = tad.create_gap_element()
+    build_tree(mas, consensus_tree, 0)
+    # 
+    print()
+    print()
+    print("==== FINAL TREE ====")
+    print(consensus_tree.childNodes[0].toprettyxml())
+    print()
+
+
+       
 
     # global channel
     # channel.queue_declare(queue="status_queue")
