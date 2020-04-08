@@ -18,7 +18,7 @@ class ConfigParseError(Exception):
 
 # "lenient" is a temporary solution to make debugging easier.
 # Long-term solution: only import settings that are needed at the locations they are used --> need to turn them into lamdbas
-def _parse(entry, f=lambda x : x, default="", lenient=True):
+def _parse(entry, f=lambda x : x, default="", lenient=False):
     try:
         entry_type = type(default)
         return entry_type(f(_config[entry])) # Use constructor of entry type
