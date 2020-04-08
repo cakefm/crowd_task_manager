@@ -101,7 +101,7 @@ class Measure(namedtuple("Measure", ["ulc", "lrc", "width", "height", "index", "
 
 Line = namedtuple("Line", ["measures", "start", "index"])
 Page = namedtuple("Page", ["lines", "start", "index", "image_name"])
-ScoreDef = namedtuple("ScoreDef", ["location", "xml"]) # "location" is the index of the first measure after it (in other words, first measure where it takes effect)
+ScoreDef = namedtuple("ScoreDef", ["index", "location", "xml"]) # "location" is the index of the first measure after it (in other words, first measure where it takes effect)
 
 class NoScoreDefException(Exception):
     pass
@@ -146,7 +146,7 @@ class Score:
             score_def_xml_node = [x for x in score_node.childNodes if x.nodeType == xml.Node.ELEMENT_NODE and x.tagName == 'scoreDef'][0]
         except IndexError as e:
             raise NoScoreDefException("ERROR: The MEI does not contain a global score def!") from e
-        self.score_def = ScoreDef(0, score_def_xml_node.toxml())
+        self.score_defs.append(ScoreDef(0, 0, score_def_xml_node.toxml()))
 
         line = []
         page = []
@@ -175,7 +175,7 @@ class Score:
                 self.measures.append(score_measure)
                 line.append(score_measure)
             if entry.tagName == "scoreDef":
-                self.score_defs.append(ScoreDef(len(self.measures), entry.toxml()))
+                self.score_defs.append(ScoreDef(len(self.score_defs), len(self.measures), entry.toxml()))
 
 
     def get_page_image(self, page_index):
@@ -252,8 +252,7 @@ class Score:
         score_dict = {
         "name" : self.name,
         "measures": [dict(measure.to_db_dict()) for measure in self.measures],
-        "score_defs" : [dict(self.score_def._asdict()) for score_def in self.score_defs],
-        "main_score_def": dict(self.score_def._asdict())
+        "score_defs" : [dict(score_def._asdict()) for score_def in self.score_defs]
         }
 
         return score_dict
