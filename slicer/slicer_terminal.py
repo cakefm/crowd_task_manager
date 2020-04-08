@@ -3,6 +3,7 @@ import pika
 import pathlib
 import os
 import sys
+import pprint
 
 sys.path.append("..")
 import common.settings as settings
@@ -16,6 +17,7 @@ parser.add_argument('path', type=str, help='Path to the main directory of the sc
 parser.add_argument('-o','--output', type=str, help='Output path, if not given it will create a folder called "slices" at the same location as the .mei file.')
 parser.add_argument('-s','--store_in_db', action="store_true", help="Store whatever slices are being created in mongo db, uses address and collection names from config.")
 parser.add_argument('-q','--message_queue', type=str, help="Create a message queue entry, uses address and queue names from config.")
+parser.add_argument('-d', '--debug_data', action="store_true", help="Only print the created data structures to the console for debugging and then exit.")
 
 group = parser.add_mutually_exclusive_group()
 group.add_argument('-a','--all', nargs='?', const=True, type=bool, help='Create all single measures, double measures, and lines.')
@@ -32,6 +34,11 @@ measure_path = f"{out_path}measures{os.path.sep}"
 line_path = f"{out_path}lines{os.path.sep}"
 double_measure_path = f"{out_path}double_measures{os.path.sep}"
 
+if args.debug_data:
+    pp = pprint.PrettyPrinter(indent=4)
+    pp.pprint(score.to_db_dict())
+    sys.exit()
+
 if args.output:
     out_path = output
 
@@ -40,6 +47,7 @@ def save_slice(score_slice, path):
     stored_slices.append(score_slice)
     pathlib.Path(path).mkdir(parents=True, exist_ok=True)
     score_slice.get_image().save(path + score_slice.get_name())
+
 
 if args.all or args.measure == -1:
     for score_slice in score.get_measure_slices():
