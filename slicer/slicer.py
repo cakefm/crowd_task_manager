@@ -101,6 +101,10 @@ class Measure(namedtuple("Measure", ["ulc", "lrc", "width", "height", "index", "
 
 Line = namedtuple("Line", ["measures", "start", "index"])
 Page = namedtuple("Page", ["lines", "start", "index", "image_name"])
+ScoreDef = namedtuple("ScoreDef", ["location", "xml"]) # "location" is the index of the first measure after it (in other words, first measure where it takes effect)
+
+class NoScoreDefException(Exception):
+    pass
 
 class Score:
     """
@@ -108,6 +112,7 @@ class Score:
     - The measures with their corresponding XML data
     - The lines with the measures
     - The pages with the lines and page image paths
+    - The score definitions
     """
     def __init__(self, path):
         # Create all relevant paths and names
@@ -120,6 +125,7 @@ class Score:
         self.lines = []
         self.pages = []
         self.images = {}
+        self.score_defs = []
 
         # MEI parsing
         self.mei = xml.parse(mei_path)
@@ -133,6 +139,14 @@ class Score:
             image_names.append(image_name)
             for zone in surface.getElementsByTagName("zone"):
                 zones[zone.attributes["xml:id"].value] = zone
+
+        # Get the main score def
+        score_node = self.mei.getElementsByTagName("score")[0]
+        try:
+            score_def_xml_node = [x for x in score_node.childNodes if x.nodeType == xml.Node.ELEMENT_NODE and x.tagName == 'scoreDef'][0]
+        except IndexError as e:
+            raise NoScoreDefException("ERROR: The MEI does not contain a global score def!") from e
+        self.score_def = ScoreDef(0, score_def_xml_node.toxml())
 
         line = []
         page = []
@@ -160,6 +174,9 @@ class Score:
                 score_measure = Measure(ulc, lrc, lrc[0]-ulc[0], lrc[1]-ulc[1], len(self.measures), len(self.lines), len(self.pages), inner_xml, has_clef)
                 self.measures.append(score_measure)
                 line.append(score_measure)
+            if entry.tagName == "scoreDef":
+                self.score_defs.append(ScoreDef(len(self.measures), entry.toxml()))
+
 
     def get_page_image(self, page_index):
         """
@@ -234,7 +251,9 @@ class Score:
         """
         score_dict = {
         "name" : self.name,
-        "measures": [dict(measure.to_db_dict()) for measure in self.measures]
+        "measures": [dict(measure.to_db_dict()) for measure in self.measures],
+        "score_defs" : [dict(self.score_def._asdict()) for score_def in self.score_defs],
+        "main_score_def": dict(self.score_def._asdict())
         }
 
         return score_dict
