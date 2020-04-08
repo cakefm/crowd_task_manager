@@ -26,7 +26,7 @@ def _parse(entry, f=lambda x : x, default="", lenient=False):
         if lenient:
             print(f"WARNING: Could not parse config entry '{entry}', ensure it has the correct format, continuing with default value: {default}")
         else:
-            raise ConfigParseError(f"ERROR: Could not parse config entry '{entry}', ensure it has the correct format.", e)
+            raise ConfigParseError(f"ERROR: Could not parse config entry '{entry}', ensure it has the correct format (set 'lenient' to `True` to avoid this).", e) from e
     return default
 
 
