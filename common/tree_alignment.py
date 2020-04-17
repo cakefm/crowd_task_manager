@@ -168,5 +168,5 @@ def align_trees_multiple(trees):
 
 
 def copy_gaps(tree1, tree2):
-    for path in tt.get_node_paths(tree1, lambda node : node.tagName == GAP_ELEMENT_NAME):
-        tt.insert_node_extend(tree2, path, create_gap_element(), create_gap_element)
+    for path in tt.get_matching_paths(tree1.documentElement, lambda node : node.tagName == GAP_ELEMENT_NAME):
+        tt.insert_node_with_extension(tree2.documentElement, path, create_gap_element(), create_gap_element())
