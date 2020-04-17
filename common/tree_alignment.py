@@ -89,25 +89,25 @@ def node_distance(a, b, ignored = {"xml:id", "n", "label", "startid", "endid"}):
     return penalty
     
 # Tree alignment: traverses all the nodes in the tree while keeping track of the total distance and node count
-def align_trees_pairwise(tree1, tree2):
+def align_trees_pairwise(tree1, tree2, distance_function=node_distance):
     nodes1 = [node for node in tree1.childNodes if node.nodeType == xml.Node.ELEMENT_NODE]
     nodes2 = [node for node in tree2.childNodes if node.nodeType == xml.Node.ELEMENT_NODE]
     
     score = 0
     
     if nodes1 or nodes2:
-        tree1.childNodes, tree2.childNodes, distance = align_xml(nodes1, nodes2, node_distance)
+        tree1.childNodes, tree2.childNodes, distance = align_xml(nodes1, nodes2, distance_function)
         aligned_nodes = list(zip(tree1.childNodes, tree2.childNodes))
         
         score += distance
         for child1, child2 in aligned_nodes:
-            new_score = align_trees_pairwise(child1, child2)
+            new_score = align_trees_pairwise(child1, child2, distance_function)
             score += new_score
             
     return score
 
 
-def align_trees_multiple(trees):
+def align_trees_multiple(trees, distance_function=node_distance):
     # Create all distinct xml pairs
     pairs = {}
     for i in range(len(trees)):
@@ -116,11 +116,11 @@ def align_trees_multiple(trees):
             b = trees[j]
             pairs[(i, j)] = (xml.parseString(a), xml.parseString(b))
 
-    # Perform pairwise alignmnents
+    # Perform pairwise alignments
     distances = np.full((len(trees), len(trees)), np.inf)
     for i, j in pairs:
         a, b = pairs[i, j]
-        distances[i, j] = align_trees_pairwise(a, b)
+        distances[i, j] = align_trees_pairwise(a, b, distance_function=distance_function)
     
     distance_bins = [0] * len(trees)
     for i, j in pairs:
