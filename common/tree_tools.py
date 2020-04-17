@@ -1,4 +1,5 @@
 import xml.dom.minidom as xml
+from collections import namedtuple
 import numpy as np
 
 # def tree_traversal(tree, depth_first=True):
@@ -98,6 +99,7 @@ import numpy as np
 #             tree.childNodes = new_nodes
 #         insert_node_extend(tree.childNodes[path[0]], path[1:], node, create_empty_node)
 
+IndexedNode = namedtuple("IndexedNode", ["path", "node"])
 
 def create_element_node(name, attributes = dict()):
     node = xml.parseString(f"<{name}/>").documentElement
