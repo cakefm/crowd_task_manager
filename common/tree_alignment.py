@@ -6,13 +6,14 @@ sys.path.append("..")
 import common.tree_tools as tt
 
 GAP_ELEMENT_NAME = "gap"
+GAP_PENALTY = 10
 
 def create_gap_element():
-    return xml.parseString("<t/>").createElement(GAP_ELEMENT_NAME)
+    return tt.create_element_node(GAP_ELEMENT_NAME)
 
 # Needleman Wunsch algorithm implementation for sequences of XML nodes
 # Algorithm based on psuedocode with modifications at: https://en.wikipedia.org/wiki/Needleman%E2%80%93Wunsch_algorithm
-def align_xml(A, B, similarity_function, gap_penalty = 10):
+def align_xml(A, B, distance_function, gap_penalty):
     # padding and re-referencing
 
     A = A + [create_gap_element() for x in range(max(0, len(B)-len(A)))]
@@ -30,7 +31,7 @@ def align_xml(A, B, similarity_function, gap_penalty = 10):
         G[0, j] = gap_penalty
     for i in range(1, len(A) + 1):
         for j in range(1, len(B) + 1):
-            match = F[i - 1, j - 1] + similarity_function(A[i - 1], B[j - 1])
+            match = F[i - 1, j - 1] + distance_function(A[i - 1], B[j - 1])
             delete = F[i - 1, j] + gap_penalty
             insert = F[i, j - 1] + gap_penalty
             minimum = min([match, insert, delete])
@@ -43,7 +44,7 @@ def align_xml(A, B, similarity_function, gap_penalty = 10):
     i = len(A)
     j = len(B)
     while i > 0 or j > 0:
-        if i > 0 and j > 0 and F[i, j] == F[i - 1, j - 1] + similarity_function(A[i - 1], B[j - 1]):
+        if i > 0 and j > 0 and F[i, j] == F[i - 1, j - 1] + distance_function(A[i - 1], B[j - 1]):
             A_aligned = [A[i - 1]] + A_aligned
             B_aligned = [B[j - 1]] + B_aligned
             i -= 1
@@ -68,7 +69,7 @@ def align_xml(A, B, similarity_function, gap_penalty = 10):
     
     return A_aligned, B_aligned, distance
 
-
+# TODO: Get rid of magic numbers
 def node_distance(a, b, ignored = {"xml:id", "n", "label", "startid", "endid"}):
     penalty = 0
     
@@ -89,25 +90,25 @@ def node_distance(a, b, ignored = {"xml:id", "n", "label", "startid", "endid"}):
     return penalty
     
 # Tree alignment: traverses all the nodes in the tree while keeping track of the total distance and node count
-def align_trees_pairwise(tree1, tree2, distance_function=node_distance):
+def align_trees_pairwise(tree1, tree2, distance_function=node_distance, gap_penalty=GAP_PENALTY):
     nodes1 = [node for node in tree1.childNodes if node.nodeType == xml.Node.ELEMENT_NODE]
     nodes2 = [node for node in tree2.childNodes if node.nodeType == xml.Node.ELEMENT_NODE]
     
     score = 0
     
     if nodes1 or nodes2:
-        tree1.childNodes, tree2.childNodes, distance = align_xml(nodes1, nodes2, distance_function)
+        tree1.childNodes, tree2.childNodes, distance = align_xml(nodes1, nodes2, distance_function, gap_penalty)
         aligned_nodes = list(zip(tree1.childNodes, tree2.childNodes))
         
         score += distance
         for child1, child2 in aligned_nodes:
-            new_score = align_trees_pairwise(child1, child2, distance_function)
+            new_score = align_trees_pairwise(child1, child2, distance_function, gap_penalty=gap_penalty)
             score += new_score
             
     return score
 
 
-def align_trees_multiple(trees, distance_function=node_distance):
+def align_trees_multiple(trees, distance_function=node_distance, gap_penalty=GAP_PENALTY):
     # Create all distinct xml pairs
     pairs = {}
     for i in range(len(trees)):
@@ -120,7 +121,7 @@ def align_trees_multiple(trees, distance_function=node_distance):
     distances = np.full((len(trees), len(trees)), np.inf)
     for i, j in pairs:
         a, b = pairs[i, j]
-        distances[i, j] = align_trees_pairwise(a, b, distance_function=distance_function)
+        distances[i, j] = align_trees_pairwise(a, b, distance_function=distance_function, gap_penalty=gap_penalty)
     
     distance_bins = [0] * len(trees)
     for i, j in pairs:
