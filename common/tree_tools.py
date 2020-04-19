@@ -13,6 +13,14 @@ def create_element_node(name, attributes = dict()):
 def filter_element_nodes(sequence):
     return [x for x in sequence if x.nodeType == xml.Node.ELEMENT_NODE]
 
+def purge_non_element_nodes(tree):
+	root = tree.cloneNode(True)
+	for node in traverse_tree(root):
+		for child in node.childNodes:
+			if child.nodeType != xml.Node.ELEMENT_NODE:
+				node.removeChild(child)
+	return root
+
 def traverse_tree(tree, depth_first):
     indexed_nodes = [IndexedNode([], tree)]
     while indexed_nodes:
