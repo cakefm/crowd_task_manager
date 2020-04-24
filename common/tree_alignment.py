@@ -97,7 +97,10 @@ def align_trees_pairwise(tree1, tree2, distance_function=node_distance, gap_pena
     score = 0
     
     if nodes1 or nodes2:
-        tree1.childNodes, tree2.childNodes, distance = align_xml(nodes1, nodes2, distance_function, gap_penalty)
+        tree1_new_children, tree2_new_children, distance = align_xml(nodes1, nodes2, distance_function, gap_penalty)
+        tt.replace_child_nodes(tree1, tree1_new_children)
+        tt.replace_child_nodes(tree2, tree2_new_children)
+
         aligned_nodes = list(zip(tree1.childNodes, tree2.childNodes))
         
         score += distance
