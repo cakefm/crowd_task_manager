@@ -17,7 +17,10 @@ mq_score_rebuilder_queue: "score_rebuilder_queue"
 mq_aggregator_queue: "aggregator_queue"
 mq_github_init_queue: "github_init_queue"
 mq_github_queue: "github_queue"
-
+mq_aggregator_xml_queue: "aggregator_xml_queue"
+mq_aggregator_form_queue: "aggregator_form_queue"
+mq_omr_planner_status_queue: "omr_planner_status_queue"
+mq_task_status_queue: "task_status_queue"
 
 # Paths
 upload_folder: "/omr_files/"
@@ -29,6 +32,10 @@ github_token: ""
 github_organization: ""
 github_branch: ""
 github_commit_count_before_push: 5
+
+# Aggregator
+aggregator_xml_threshold: 0.6
+aggregator_form_threshold: 0.6
 
 # Other
 ce_server: "https://api-test.trompamusic.eu/"
