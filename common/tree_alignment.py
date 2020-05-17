@@ -176,11 +176,11 @@ def copy_gaps(tree1, tree2):
         tt.insert_node_with_extension(tree2.documentElement, path, create_gap_element(), create_gap_element())
 
 
-def best_node_distance(nodes):
+def consensus_best_node_distance(nodes):
     node_distances = np.full((len(nodes), len(nodes)), np.inf)
     for i, a in enumerate(nodes):
         for j, b in enumerate(nodes): 
-            node_distances[i, j] = ta.node_distance(a, b)
+            node_distances[i, j] = node_distance(a, b)
     
     # Get the cumulative distances of all the nodes to one another
     node_distance_bins = [0] * len(nodes)
@@ -203,9 +203,9 @@ def best_node_distance(nodes):
     return nodes[np.argmin(node_distance_bins)], consensus
 
 
-def build_consensus_tree(trees, consensus_method = best_node_distance, exclude = [GAP_ELEMENT_NAME]):
+def build_consensus_tree(trees, consensus_method = consensus_best_node_distance, exclude = [GAP_ELEMENT_NAME]):
     consensus_per_node = {}
-    return _build_consensus_tree(trees, ta.create_gap_element(), 0, consensus_method, exclude, node_consensus_dict).childNodes[0], consensus_per_node
+    return _build_consensus_tree(trees, create_gap_element(), 0, consensus_method, exclude, node_consensus_dict).childNodes[0], consensus_per_node
 
 
 def _build_consensus_tree(trees, new_tree, n, consensus_method, exclude, node_consensus_dict):
@@ -217,7 +217,7 @@ def _build_consensus_tree(trees, new_tree, n, consensus_method, exclude, node_co
             if best.tagName in exclude:
                 continue
 
-            new_node =  ta.create_gap_element()
+            new_node =  create_gap_element()
             new_node.tagName = best.tagName
             for key in best.attributes.keys():
                 new_node.setAttribute(key, best.attributes[key].value)
