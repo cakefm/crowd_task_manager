@@ -222,11 +222,7 @@ def _build_consensus_tree(trees, new_tree, n, consensus_method, exclude, node_co
             node_consensus_dict[best] = consensus
             if best.tagName in exclude:
                 continue
-
-            new_node =  create_gap_element()
-            new_node.tagName = best.tagName
-            for key in best.attributes.keys():
-                new_node.setAttribute(key, best.attributes[key].value)
-            new_tree.childNodes.append(new_node)
-            _build_consensus_tree(nodes, new_node, n + 1, consensus_method, exclude)
+                
+            new_tree.childNodes.append(best.cloneNode(False))
+            _build_consensus_tree(nodes, new_tree.childNodes[-1], n + 1, consensus_method, exclude, node_consensus_dict)
     return new_tree
