@@ -202,16 +202,19 @@ def consensus_best_node_distance(nodes):
 
     return nodes[np.argmin(node_distance_bins)], consensus
 
-def consensus_bnd_enrich_first(nodes):
+def consensus_bnd_enrich_skeleton(nodes):
     first = nodes[0]
-    best, consensus = consensus_best_node_distance(nodes[1:])
-    if len(best.childNodes) > len(first.childNodes):
-        first = tt.replace_child_nodes(first, best.childNodes)
-    return first
+    if first.tagName == "measure":
+        return first, True
+    if first.tagName==GAP_ELEMENT_NAME:
+        best, consensus = consensus_best_node_distance(nodes[1:])
+    else:
+        best, consensus = consensus_best_node_distance(nodes)
+    return best, consensus
 
 def build_consensus_tree(trees, consensus_method = consensus_best_node_distance, exclude = [GAP_ELEMENT_NAME]):
     consensus_per_node = {}
-    return _build_consensus_tree(trees, create_gap_element(), 0, consensus_method, exclude, node_consensus_dict).childNodes[0], consensus_per_node
+    return _build_consensus_tree(trees, create_gap_element(), 0, consensus_method, exclude, dict()).childNodes[0], consensus_per_node
 
 
 def _build_consensus_tree(trees, new_tree, n, consensus_method, exclude, node_consensus_dict):
