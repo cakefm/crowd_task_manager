@@ -4,6 +4,7 @@ import numpy as np
 import sys
 sys.path.append("..")
 import common.tree_tools as tt
+import common.settings as settings
 
 GAP_ELEMENT_NAME = "gap"
 GAP_PENALTY = 10
@@ -70,7 +71,7 @@ def align_xml(A, B, distance_function, gap_penalty):
     return A_aligned, B_aligned, distance
 
 # TODO: Get rid of magic numbers
-def node_distance(a, b, ignored = {"xml:id", "n", "label", "startid", "endid"}):
+def node_distance(a, b, ignored = {"xml:id", "label", "startid", "endid", "facs"}):
     penalty = 0
     
     # Different tag
