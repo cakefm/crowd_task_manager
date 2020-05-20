@@ -32,6 +32,19 @@ def filter_element_nodes(sequence):
     '''
     return [x for x in sequence if x.nodeType == xml.Node.ELEMENT_NODE]
 
+def node_type_filter(node_type):
+    '''
+    Creates a lambda that can act as a node filter for the tree traversal function.
+    This filter will filter on the given node type.
+
+    Arguments:
+        node_type (int)                    -- Type of the xml node to filter on
+
+    Returns:
+        filter (<Node> -> <bool>)          -- A function that returns True if Node.nodeType==node_type
+    '''
+    return lambda node : node.nodeType == node_type
+
 def purge_non_element_nodes(tree):
     '''
     Purges all non-element nodes from the given (sub) tree. It does not edit the tree
@@ -44,13 +57,12 @@ def purge_non_element_nodes(tree):
         purged (Node)                       -- A copy of the tree that only contains element nodes
     '''
     root = tree.cloneNode(True)
-    for node in traverse_tree(root):
-        for child in node.childNodes:
-            if child.nodeType != xml.Node.ELEMENT_NODE:
-                node.removeChild(child)
+    for indexed_node in traverse_tree(root, filter_function=lambda x : x):
+        if indexed_node.node.nodeType != xml.Node.ELEMENT_NODE:
+            indexed_node.node.parentNode.removeChild(indexed_node.node)
     return root
 
-def traverse_tree(tree, depth_first):
+def traverse_tree(tree, depth_first=True, filter_function=node_type_filter(xml.Node.ELEMENT_NODE)):
     '''
     Provides a generator that traverses the tree in either a depth-first or a breadth-first fashion,
     depending on the given argument. Ignores non-element nodes during traversal.
@@ -65,22 +77,11 @@ def traverse_tree(tree, depth_first):
     indexed_nodes = [IndexedNode([], tree)]
     while indexed_nodes:
         indexed_node = indexed_nodes.pop() if depth_first else indexed_nodes.pop(0)
-        filtered_child_nodes = enumerate(filter_element_nodes(indexed_node.node.childNodes))
+        filtered_child_nodes = enumerate(filter(filter_function, indexed_node.node.childNodes))
         indexed_child_nodes = [IndexedNode(indexed_node.path[:] + [index],  child) for index, child in filtered_child_nodes]
         indexed_nodes += reversed(indexed_child_nodes) if depth_first else indexed_child_nodes
         yield indexed_node
-        
-def traverse_tree_bf(tree):
-    '''
-    Convenience function: performs `traverse_tree` with breadth-first traversal.
-    '''
-    return traverse_tree(tree, False)
 
-def traverse_tree_df(tree):
-    '''
-    Convenience function: performs `traverse_tree` with depth-first traversal.
-    '''
-    return traverse_tree(tree, True)
 
 def insert_node(tree, path, node):
     '''
@@ -192,7 +193,7 @@ def get_matching_paths(tree, criteria_function):
     Returns:
         paths (list<list<int>>)                 -- A list of matching paths
     '''
-    return [indexed_node.path for indexed_node in traverse_tree_bf(tree) if criteria_function(indexed_node.node)]
+    return [indexed_node.path for indexed_node in traverse_tree(tree, depth_first=False) if criteria_function(indexed_node.node)]
 
 def get_matching_nodes(tree, criteria_function):
     '''
@@ -205,7 +206,7 @@ def get_matching_nodes(tree, criteria_function):
     Returns:
         nodes (list<Node>)                      -- A list of matching nodes
     '''
-    return [indexed_node.node for indexed_node in traverse_tree_bf(tree) if criteria_function(indexed_node.node)]
+    return [indexed_node.node for indexed_node in traverse_tree(tree, depth_first=False) if criteria_function(indexed_node.node)]
 
 def trees_equivalent(tree_1, tree_2, node_distance_function):
     '''
@@ -220,8 +221,8 @@ def trees_equivalent(tree_1, tree_2, node_distance_function):
     Returns:
         trees_equivalent (bool)                             -- Whether the trees are equivalent
     '''
-    indexed_nodes_1 = [n for n in traverse_tree_df(tree_1)]
-    indexed_nodes_2 = [n for n in traverse_tree_df(tree_2)]
+    indexed_nodes_1 = [n for n in traverse_tree(tree_1)]
+    indexed_nodes_2 = [n for n in traverse_tree(tree_2)]
     
     if len(indexed_nodes_1) != len(indexed_nodes_2):
         return False
@@ -247,7 +248,8 @@ def replace_child_nodes(tree, new_child_nodes):
     Returns:
         tree (Node)                             -- The modified tree (not a copy, same ref!)
     '''
-    for child in tree.childNodes:
+    for child in [c for c in tree.childNodes]:
         tree.removeChild(child)
     for child in new_child_nodes:
         tree.appendChild(child)
+    return tree
