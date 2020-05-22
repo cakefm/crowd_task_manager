@@ -32,6 +32,9 @@ task_collection_name = config["mongo_task_collection"]
 result_collection_name = config["mongo_result_collection"]
 aggregator_xml_queue_name = config["mq_aggregator_xml_queue"]
 aggregator_form_queue_name = config["mq_aggregator_form_queue"]
+omr_planner_status_queue_name = config["mq_omr_planner_status_queue"]
+aligner_queue_name = config["mq_aligner_queue"]
 task_status_queue_name = config["mq_task_status_queue"]
+
 aggregator_xml_threshold = min(1., max(0., float(config["aggregator_xml_threshold"])))
 aggregator_form_threshold = min(1., max(0., float(config["aggregator_form_threshold"])))

@@ -22,6 +22,11 @@ def callback(ch, method, properties, body):
     sheet_name = data['name']
     partial_file_names = data['partials']
 
+    # Get sheet id (for status queue)
+    client = MongoClient(settings.mongo_address[0], int(settings.mongo_address[1]))
+    db = client.trompa_test
+    sheet_id = str(db[settings.sheet_collection_name].find_one({"name" : sheet_name})["_id"])
+
     whole_dir = fsm.get_sheet_whole_directory(sheet_name)
     skeleton_path = whole_dir / 'skeleton.mei'
     partial_paths = [whole_dir / partial for partial in partial_file_names]
@@ -50,25 +55,24 @@ def callback(ch, method, properties, body):
         # We also purge everything that is not an element, to keep the tree clean and easily output a prettified XML file
         aligned_mei_file.write(tt.purge_non_element_nodes(skeleton_document).toprettyxml())
     
-    # Update task status
-    # status_update_msg = {
-    # '_id': task_id,
-    # 'module': 'aggregator_xml',
-    # 'status': 'complete'
-    # }
+    # Update status
+    status_update_msg = {
+    '_id': sheet_id,
+    'module': 'aligner',
+    'status': 'complete',
+    'name': sheet_name
+    }
 
-    # For now, only consider the tree to be good enough if consensus was reached for every node
-    
-    # global channel
-    # channel.queue_declare(queue=settings.task_status_queue_name)
-    # channel.basic_publish(exchange="", routing_key="aligner", body=json.dumps(status_update_msg))
+    global channel
+    channel.queue_declare(queue=settings.omr_planner_status_queue_name)
+    channel.basic_publish(exchange="", routing_key=settings.omr_planner_status_queue_name, body=json.dumps(status_update_msg))
 
 address = settings.rabbitmq_address
 connection = pika.BlockingConnection(pika.ConnectionParameters(address[0], address[1]))
 channel = connection.channel()
-n = "aligner_queue"
-channel.queue_declare(queue=n)
-channel.basic_consume(queue=n, on_message_callback=callback, auto_ack=True)
+
+channel.queue_declare(queue=settings.aligner_queue_name)
+channel.basic_consume(queue=settings.aligner_queue_name, on_message_callback=callback, auto_ack=True)
 
 print('XML aligner is listening...')
 channel.start_consuming()
