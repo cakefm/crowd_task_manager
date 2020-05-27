@@ -229,8 +229,8 @@ def taskpost(variable):
                             'status': 'complete',
                             'name': task['score']}
                         send_message(
-                            'status_queue',
-                            'status_queue',
+                            'omr_planner_status_queue',
+                            'omr_planner_status_queue',
                             json.dumps(status_update_msg))
                         send_message(
                             'ce_communicator_queue',
@@ -326,7 +326,7 @@ def show_sheet(variable):
 def show_page_context(variable):
     myclient = pymongo.MongoClient(MONGO_SERVER)
     mydb = myclient[MONGO_DB]
-    mycol = mydb["task_context_test"]
+    mycol = mydb["task_context"]
     myquery = {"task_id": ObjectId(variable)}
     mydoc = mycol.find_one(myquery)
     page_nr = mydoc['page_nr']
@@ -338,7 +338,7 @@ def show_page_context(variable):
     mydoc2 = mycol2.find_one(myquery2)
     nr_pages = len(mydoc2['pages_path'])
 
-    mycol = mydb["task_context_test"]
+    mycol = mydb["task_context"]
     myquery = {"score": score, "page_nr": page_nr}
     mydoc = mycol.find(myquery, {'_id': False, 'task_id': False})
 

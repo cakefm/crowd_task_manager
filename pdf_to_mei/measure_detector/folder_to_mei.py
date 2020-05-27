@@ -65,7 +65,7 @@ def run(sheet_name):
 
     # Detect measures
     page_path = fsm.get_sheet_pages_directory(sheet_name)
-    image_paths = [str(p.resolve()) for p in page_path.iterdir() if p.is_file()]
+    image_paths = sorted([str(p.resolve()) for p in page_path.iterdir() if p.is_file()], key = lambda x : int(os.path.basename(x).split('_')[1].split('.')[0]))
 
     pages = []
 

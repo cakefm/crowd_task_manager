@@ -74,23 +74,63 @@ def main():
                         'measure_detector',
                         score['score_name'],
                         score['_id'])
-            score_status = read_message('status_queue')
+            score_status = read_message('omr_planner_status_queue')
             if len(score_status) > 0:
                 if score_status['module'] == 'measure_detector':
+                    mycol = db['sheets']
+                    myquery = {"name" : score_status['name']}
+                    mydoc = mycol.find_one(myquery)
+                    if(mydoc['submitted_mei_path']):
+                        if(len(mydoc['submitted_mei_path']) > 0):
+                            print(
+                                datetime.now(),
+                                'sending ',
+                                score_status['name'], 'to aligner')
+                            send_message(
+                                'aligner_queue',
+                                'aligner_queue',
+                                json.dumps({
+                                    '_id': score_status['_id'],
+                                    'partials': [mydoc['submitted_mei_path']],
+                                    'name': score_status['name']}))
+                            continue
+                    else:
+                        print(
+                            datetime.now(),
+                            'sending ',
+                            score_status['name'], 'to slicer')
+                        send_message(
+                            'slicer_queue',
+                            'slicer_queue',
+                            json.dumps({
+                                '_id': score_status['_id'],
+                                'name': score_status['name']}))
+                        print(
+                            datetime.now(),
+                            'sending ',
+                            score_status['name'], 'to github_init')
+                        send_message(
+                            'github_init_queue',
+                            'github_init_queue',
+                            json.dumps({
+                                '_id': score_status['_id'],
+                                'name': score_status['name']}))
+                        continue
+                if score_status['module'] == 'aligner':
                     print(
                         datetime.now(),
                         'sending ',
                         score_status['name'], 'to slicer')
-                    print(
-                        datetime.now(),
-                        'sending ',
-                        score_status['name'], 'to github_init')
                     send_message(
                         'slicer_queue',
                         'slicer_queue',
                         json.dumps({
                             '_id': score_status['_id'],
                             'name': score_status['name']}))
+                    print(
+                        datetime.now(),
+                        'sending ',
+                        score_status['name'], 'to github_init')
                     send_message(
                         'github_init_queue',
                         'github_init_queue',

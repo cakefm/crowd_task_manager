@@ -194,6 +194,7 @@ def main():
                                 datetime.now(),
                                 'sent message to ce_communicator for ',
                                 task_id)
+                    create_context_for_tasks(score)
                 # elif(data['action'] == 'create_edit_tasks'):
                 #     print('creating verify task')
 

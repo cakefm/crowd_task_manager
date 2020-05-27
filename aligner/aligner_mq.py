@@ -28,7 +28,7 @@ def callback(ch, method, properties, body):
     sheet_id = str(db[settings.sheet_collection_name].find_one({"name" : sheet_name})["_id"])
 
     whole_dir = fsm.get_sheet_whole_directory(sheet_name)
-    skeleton_path = whole_dir / 'skeleton.mei'
+    skeleton_path = whole_dir / 'aligned.mei'
     partial_paths = [whole_dir / partial for partial in partial_file_names]
 
     # skeleton always has 1 section which just contains the measures and some additional tags

@@ -48,8 +48,8 @@ def callback(ch, method, properties, body):
     }
 
     global channel
-    channel.queue_declare(queue="status_queue")
-    channel.basic_publish(exchange="", routing_key="status_queue", body=json.dumps(status_update_msg))
+    channel.queue_declare(queue="omr_planner_status_queue")
+    channel.basic_publish(exchange="", routing_key="omr_planner_status_queue", body=json.dumps(status_update_msg))
 
 
 address = settings.rabbitmq_address
