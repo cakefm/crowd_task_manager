@@ -140,7 +140,7 @@ def create_controlaction(task_id):
     data = json.loads(response.text)
 
     # record the submitted task to db
-    ce_id = data['data']['CreateControlAction']['identifier']
+    ce_id = data['data']['RequestControlAction']['identifier']
     submitted_task = {
         'ce_identifier': ce_id,
         'task_id': task_id,
@@ -148,20 +148,65 @@ def create_controlaction(task_id):
         'ts': datetime.now(),
         'url': task_url,
         'status': 'pending',
-        'name': result['name']
+        'name': result['name'],
+        'type': 'edit'
     }
     submitted_task_coll = mydb['submitted_tasks']
     submitted_task_coll.insert_one(submitted_task)
 
 
-def update_control_action_status(identifier, action_status):
+def create_controlaction_verify(task_id):
+    # query task data from db
+    myclient = pymongo.MongoClient(MONGO_SERVER)
+    mydb = myclient[MONGO_DB]
+    mycol = mydb["tasks"]
+    query = {'_id': ObjectId(task_id)}
+    result = mycol.find_one(query)
+    name = result['name']
+    description = ''
+    task_url = SERVER_ADDRESS + 'verify/' + task_id
+    actionStatus = "PotentialActionStatus"
+
+    # submit task data to ce
+    url = CE_SERVER
+    payload = "{\"query\":\"mutation {\\n   RequestControlAction(\\n       controlAction: {\\n           entryPointIdentifier: \\\"%s\\\"\\n           potentialActionIdentifier: \\\"%s\\\"\\n           potentialAction: {\\n               name: \\\"%s\\\"\\n               url: \\\"%s\\\"\\n           }\\n       }\\n   ) {\\n       identifier\\n   }\\n}\\n\"}"
+    payload = payload % (ENTRYPOINT_ID, VERIFY_POTENTIALACTION_ID, name, task_url)
+    headers = headers = {'content-type': 'application/json'}
+    response = requests.request("POST", url, data=payload, headers=headers)
+    data = json.loads(response.text)
+
+    # record the submitted task to db
+    ce_id = data['data']['RequestControlAction']['identifier']
+    submitted_task = {
+        'ce_identifier': ce_id,
+        'task_id': task_id,
+        'xml': [],
+        'ts': datetime.now(),
+        'url': task_url,
+        'status': 'pending',
+        'name': result['name'],
+        'type': 'verify'
+    }
+    submitted_task_coll = mydb['submitted_tasks']
+    submitted_task_coll.insert_one(submitted_task)
+
+
+def update_control_action_status(identifier, action_status, task_type):
     url = CE_SERVER
     # ActiveActionStatus,
     # CompletedActionStatus,
     # FailedActionStatus,
     # PotentialActionStatus
+
+    myclient = pymongo.MongoClient(MONGO_SERVER)
+    mydb = myclient[MONGO_DB]
+    mycol = mydb["submitted_tasks"]
+
+    entry = mycol.find_one({"task_id": identifier, "type": task_type})
+    ce_identifier = entry['ce_identifier']
+
     payload = "{\"query\":\"mutation{\\n  UpdateControlAction(\\n    identifier: \\\"%s\\\",\\n    actionStatus: %s\\n  )\\n  {\\n    identifier,\\n    actionStatus,\\n    url\\n  }\\n}\"}"
-    payload = payload % (identifier, action_status)
+    payload = payload % (ce_identifier, action_status)
     headers = {'content-type': 'application/json'}
     response = requests.request("POST", url, data=payload, headers=headers)
     print(response.text)
@@ -172,11 +217,11 @@ def main():
         begin_time = datetime.now()
         sleep_in_minutes = 1
         while True:
-            if((datetime.now() - begin_time).total_seconds() > (sleep_in_minutes * 30)):
-                print(datetime.now(), "Monitor Upload")
-                poll_controlactions()
-                begin_time = datetime.now()
-                print(datetime.now(), "Nap Time!")
+            # if((datetime.now() - begin_time).total_seconds() > (sleep_in_minutes * 30)):
+            #     print(datetime.now(), "Monitor Upload")
+            #     poll_controlactions()
+            #     begin_time = datetime.now()
+            #     print(datetime.now(), "Nap Time!")
             connection = pika.BlockingConnection(
                 pika.ConnectionParameters(
                     host=RABBITMQ_ADDRESS,
@@ -188,14 +233,24 @@ def main():
                 msg = json.loads(body.decode("utf-8"))
                 # forward message to ce
                 # task created message
-                if msg['action'] == 'task created':
+                if msg['action'] == 'edit task created':
                     create_controlaction(
                         msg['_id'])
+                elif msg['action'] == 'verify task created':
+                    create_controlaction_verify(
+                        msg['_id'])
+                # task active message
+                elif msg['action'] == 'task active':
+                    update_control_action_status(
+                        msg['identifier'],
+                        msg['status'],
+                        msg['type'])
                 # task completed message
                 elif msg['action'] == 'task completed':
                     update_control_action_status(
                         msg['identifier'],
-                        msg['status'])
+                        msg['status'],
+                        msg['type'])
                 channel.basic_ack(method_frame.delivery_tag)
             channel.close()
             connection.close()
