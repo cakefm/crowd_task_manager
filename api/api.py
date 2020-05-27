@@ -373,6 +373,7 @@ def upload_sheet():
             flash('No file part')
             return redirect(request.url)
         file = request.files['file']
+        mei = request.files['mei']
         # if user does not select file, browser also
         # submit an empty part without filename
         if file.filename == '':
@@ -393,6 +394,14 @@ def upload_sheet():
             os.chown(data_folder, uid, gid)
             file.save(os.path.join(data_folder, sheet_path))
             os.chown(sheet_path, uid, gid)
+            mei_path = ''
+
+            if mei:
+                mei_filename = secure_filename(mei.filename)
+                mei_path = data_folder / mei_filename
+
+                mei.save(os.path.join(data_folder, mei_filename))
+                os.chown(mei_path, uid, gid)
 
             # create entry into database
             myclient = pymongo.MongoClient(MONGO_SERVER)
@@ -411,7 +420,8 @@ def upload_sheet():
                 "name": os.path.splitext(file.filename)[0],
                 "description": request.form['description'],
                 "sheet_path": str(sheet_path),
-                "ts": datetime.now()
+                "ts": datetime.now(),
+                "submitted_mei_path": str(mei_path)
             }
             identifier = mycol.insert_one(result).inserted_id
             # send message to omr_planner
@@ -422,6 +432,7 @@ def upload_sheet():
                 json.dumps(message))
 
             return redirect(url_for('uploaded_file', filename=sheet_path_temp))
+
     return '''
     <!doctype html>
     <title>Upload new File</title>
@@ -432,7 +443,8 @@ def upload_sheet():
         <br>
         Description: <br>
         <input type=text name=description value=""><br>
-        <input type=file name=file>
+        PDF: <br><input type=file name=file><br>
+        MEI(Optional): <br><input type=file name=mei>
         <input type=submit value=Upload>
     </form>
     '''
