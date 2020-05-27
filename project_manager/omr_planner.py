@@ -109,7 +109,7 @@ def main():
                         json.dumps({
                             '_id': score_status['_id'],
                             'name': score_status['name'],
-                            'action': 'verify_measures'}))
+                            'action': 'create_edit_tasks'}))
                     continue
                 if score_status['module'] == 'aggregator':
                     # send message to score_rebuilder_queue
@@ -123,6 +123,17 @@ def main():
                         json.dumps({
                             'task_id': score_status['_id'],
                             'name': score_status['name']}))
+                    # print(
+                    #     datetime.now(),
+                    #     'sending ',
+                    #     score_status['name'], 'to task_scheduler')
+                    # send_message(
+                    #     'task_scheduler_queue',
+                    #     'task_scheduler_queue',
+                    #     json.dumps({
+                    #         '_id': score_status['_id'],
+                    #         'action': 'create_verify_task',
+                    #         'name': score_status['name']}))
                     continue
                 if score_status['module'] == 'github_init':
                     # communicate to ce that github repo has been initiated

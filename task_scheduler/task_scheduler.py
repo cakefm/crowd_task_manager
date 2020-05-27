@@ -13,6 +13,7 @@ import pathlib
 from pathlib import Path
 import os
 from datetime import datetime
+import xml.etree.ElementTree as ET
 
 with open("../settings.yaml", "r") as file:
     config = yaml.safe_load(file.read())
@@ -96,7 +97,76 @@ def submit_task_to_ce(task_id):
     send_message(
         'ce_communicator_queue',
         'ce_communicator_queue',
-        json.dumps({'action': 'task created', '_id': task_id}))
+        json.dumps({'action': 'edit task created', '_id': task_id}))
+    return ''
+
+
+def create_context_for_tasks(score_name):
+    mycol = db['sheets']
+    myquery = {"name": score_name}
+    mydoc = mycol.find_one(myquery)
+    mei_path = mydoc['mei_path'][0]
+    pages = mydoc['pages_path']
+
+    tree = ET.parse(mei_path)
+    root = tree.getroot()
+
+    mapping = {}
+    thing = root.find('{http://www.music-encoding.org/ns/mei}music')
+    thing2 = thing.find('{http://www.music-encoding.org/ns/mei}facsimile')
+    for thing3 in thing2.findall('{http://www.music-encoding.org/ns/mei}surface'):
+        for child in thing3.findall('{http://www.music-encoding.org/ns/mei}zone'):
+            zone_id = child.get('{http://www.w3.org/XML/1998/namespace}id')
+            coordinates = {}
+            coordinates['ulx'] = child.get('ulx')
+            coordinates['uly'] = child.get('uly')
+            coordinates['lrx'] = child.get('lrx')
+            coordinates['lry'] = child.get('lry')
+            mapping['#' + zone_id] = coordinates
+
+    mycol = db['tasks']
+    myquery = {"score": score_name}
+    mydoc = mycol.find(myquery)
+    task_context_collection = []
+    for task in mydoc:
+        task_context = {}
+        task_context['task_id'] = task['_id']
+        task_context['preface'] = ''
+        task_context['postface'] = ''
+        task_context['image_path'] = task['image_path']
+        task_context['score'] = task['score']
+
+        mycol2 = db['slices']
+        myquery2 = {"_id": ObjectId(task['slice_id'])}
+        mydoc2 = mycol2.find_one(myquery2)
+        start = mydoc2['start']
+        
+        mycol3 = db['scores']
+        myquery3 = {"name": mydoc2['score']}
+        mydoc3 = mycol3.find_one(myquery3)
+        xml = mydoc3['measures'][start]['xml']
+
+        task_context['page_nr'] = mydoc3['measures'][start]['page_index']
+
+        # xml = task['xml']
+        tree = ET.fromstring(xml)
+        zone_id = tree.get('facs')
+        coords = mapping[zone_id]
+        task_context['coords'] = coords
+        task_context_collection.append(task_context)
+
+    mycol4 = db['task_context']
+    mycol4.insert_many(task_context_collection)
+
+    # TODO: test this copy files
+    i = 0
+    for page in pages:
+        api_folder = str(os.path.abspath(os.path.join(os.getcwd(), '..', 'api')))
+        pathlib.Path(api_folder + "/static/" + score_name + "/pages/").mkdir(parents=True, exist_ok=True)
+        copy_folder = page
+        copy_dest = api_folder + "/static/" + score_name + "/pages/page_" + str(i) + ".jpg"
+        i = i + 1
+        copyfile(copy_folder, copy_dest)
     return ''
 
 
@@ -107,22 +177,49 @@ def main():
             # read task_scheduler_queue
             data = read_message('task_scheduler_queue')
             if data != '':
-                print('reading task_scheduler_queue')
-                score = data['name']
+                if(data['action'] == 'create_edit_tasks'):
+                    print('reading task_scheduler_queue')
+                    score = data['name']
 
-                mycol = db['slices']
-                myquery = {"score": score}
-                mydoc = mycol.find(myquery)
-                for measure_slice in mydoc:
-                    slice_length = measure_slice['end'] - measure_slice['start']
-                    if(slice_length == 1):
-                        task_id = create_task_from_slice(measure_slice)
-                        print(datetime.now(), 'created task ', task_id)
-                        submit_task_to_ce(task_id)
-                        print(
-                            datetime.now(),
-                            'sent message to ce_communicator for ',
-                            task_id)
+                    mycol = db['slices']
+                    myquery = {"score": score}
+                    mydoc = mycol.find(myquery)
+                    for measure_slice in mydoc:
+                        slice_length = measure_slice['end'] - measure_slice['start']
+                        if(slice_length == 1):
+                            task_id = create_task_from_slice(measure_slice)
+                            print(datetime.now(), 'edit created task ', task_id)
+                            submit_task_to_ce(task_id)
+                            print(
+                                datetime.now(),
+                                'sent message to ce_communicator for ',
+                                task_id)
+                # elif(data['action'] == 'create_edit_tasks'):
+                #     print('creating verify task')
+
+                #     mycol = db['tasks']
+                #     myquery = {"_id": ObjectId(data['_id'])}
+                #     mydoc = mycol.find_one(myquery)
+
+                #     mycol2 = db['results']
+                #     myquery2 = {"task_id": data['_id']}
+                #     mydoc2 = mycol2.find(myquery2)
+                #     end_result = mydoc2[0]['xml']
+
+                #     for result in mydoc2:
+                #         end_result = result['xml']
+
+                #     new_task = {
+                #         'name': mydoc['name'],
+                #         'score': mydoc['score'],
+                #         'slice_id': mydoc['slice_id'],
+                #         'image_path': mydoc['image_path'],
+                #         'xml': end_result
+                #     }
+
+                #     entry = db["tasks"].insert_one(new_task).inserted_id
+
+
     except KeyboardInterrupt:
         print('interrupted')
 

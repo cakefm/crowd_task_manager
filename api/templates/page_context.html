@@ -1,0 +1,151 @@
+<html>
+<head>
+	<link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">
+</head>
+<style type="text/css">
+	html, body {
+  width:  100%;
+  height: 100%;
+  margin: 0;
+}
+</style>
+<script type="text/javascript">
+	var content =  JSON.parse({{ tasks|tojson }});
+	var highlight =  JSON.parse({{ coords|tojson }});
+	var nr_pages = {{nr_pages}}
+	console.log(content)
+	console.log(nr_pages)
+	var max_x = 0;
+	var max_y = 0;
+	const offset_x = []
+	const offset_y = []
+	for(x in content){
+		var ulx = parseInt((content[x])['coords']['ulx'])
+		var uly = parseInt((content[x])['coords']['uly'])
+		var lrx = parseInt((content[x])['coords']['lrx'])
+		var lry = parseInt((content[x])['coords']['lry'])
+		if(lrx > max_x){
+			max_x = lrx;
+		}
+		if(lry > max_y){
+			max_y = lry;
+		}
+	}
+	var image_count = 0;
+	const images = []
+	var current_page = content[0]['page_nr']
+	
+	
+
+	// function called once all images have loaded.
+	function allLoaded(ctx){
+	    // all images have loaded and can be rendered
+	    // var scaling = window.innerWidth / max_x;
+    	// new_width = max_x * scaling
+    	// new_hight = max_y * scaling
+
+    	var img = new Image;
+		var url_path = 'https://crowdmanager.eu/static/' + content[0]['score'] + '/pages/page_' + current_page + '.jpg';
+		img.src = url_path;
+
+		var scaling = window.innerWidth / img.width;
+    	new_width = img.width * scaling
+    	new_hight = img.height * scaling
+
+    	ctx.drawImage(img, 0, 0, new_width,new_hight);
+
+    	if(current_page === content[0]['page_nr']){
+    		ctx.beginPath();
+	    	ctx.strokeStyle = 'rgba(255,0,0,0.4)';
+			ctx.fillStyle = 'rgba(255,0,0,0.4)';
+			ctx.lineWidth = 10;
+			new_width = (parseInt(highlight['lrx']) - parseInt(highlight['ulx'])) * scaling
+		    new_hight = (parseInt(highlight['lry']) - parseInt(highlight['uly'])) * scaling
+			ctx.rect((highlight['ulx'] * scaling), (highlight['uly'] *scaling), new_width, new_hight);
+			ctx.stroke();
+    	}
+	    
+	}
+
+
+
+	// console.log(content[0])
+	window.onload = function() {
+		var canvas = document.getElementById("myCanvas");
+		canvas.width = max_x;
+		canvas.height = max_y;
+		var ctx = canvas.getContext("2d");
+
+		var img = new Image;
+		var url_path = 'https://crowdmanager.eu/static/' + content[0]['score'] + '/pages/page_' + current_page + '.jpg';
+		img.src = url_path;
+		img.onload = function(){
+	  		var scaling = window.innerWidth / img.width;
+	    	new_width = img.width * scaling
+	    	new_hight = img.height * scaling
+
+	  		ctx.drawImage(img, 0, 0, new_width,new_hight);
+	  		images.push(img);
+
+	  		ctx.beginPath();
+	    	ctx.strokeStyle = 'rgba(255,0,0,0.4)';
+			ctx.fillStyle = 'rgba(255,0,0,0.4)';
+			ctx.lineWidth = 10;
+			new_width = (parseInt(highlight['lrx']) - parseInt(highlight['ulx'])) * scaling
+		    new_hight = (parseInt(highlight['lry']) - parseInt(highlight['uly'])) * scaling
+			ctx.rect((highlight['ulx'] * scaling), (highlight['uly'] *scaling), new_width, new_hight);
+			ctx.stroke();
+			};
+		
+}
+
+</script>
+<body>
+<button id="button1" onClick="Previous()" type="button">Previous page</button>
+<button id="button2" onClick="Next()" type="button">Next page</button>
+<canvas id="myCanvas" width="240" height="297" style="border:1px solid #d3d3d3;">
+Your browser does not support the HTML5 canvas tag.
+</canvas>
+
+
+</body>
+
+<script>
+	var canvas = document.getElementById("myCanvas");
+	var ctx = canvas.getContext("2d");
+	function resize() {
+		ctx.clearRect(0, 0, canvas.width, canvas.height);
+    	allLoaded(ctx)
+	}
+
+	function Previous(){
+		if((current_page > 0) && (current_page < nr_pages)){
+			images.pop();
+			current_page -= 1;
+			var img = new Image;
+			var url_path = 'https://crowdmanager.eu/static/' + content[0]['score'] + '/pages/page_' + current_page + '.jpg';
+			img.src = url_path;
+			images.push(img);
+			img.onload = function(){
+				allLoaded(ctx)
+			}
+		}
+	}
+
+	function Next(){
+		if((current_page >= 0) && (current_page < nr_pages-1)){
+			images.pop();
+			current_page += 1;
+			var img = new Image;
+			var url_path = 'https://crowdmanager.eu/static/' + content[0]['score'] + '/pages/page_' + current_page + '.jpg';
+			img.src = url_path;
+			images.push(img);
+			img.onload = function(){
+				allLoaded(ctx)
+			}
+		}
+	}
+	window.onresize = function() { resize(); }
+	resize();
+ </script>
+</html>
