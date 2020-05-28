@@ -60,7 +60,7 @@ def callback(ch, method, properties, body):
         'name': name}
 
     channel.basic_publish(exchange='',
-        routing_key='status_queue',
+        routing_key='omr_planner_status_queue',
         body=json.dumps(status_update_msg))
     print(f"Published processed score {score.name} to message queue!")
 

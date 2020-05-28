@@ -65,7 +65,8 @@ def create_task_from_slice(measure_slice):
         'score': measure_slice['score'],
         'slice_id': str(measure_slice['_id']),
         'image_path': measure_slice['score'] + subfolder + measure_slice['name'],
-        'xml': getXMLofSlice(measure_slice['score'], measure_slice['start'], measure_slice['end'])}
+        'status': 'annotation',
+        'xml': getXMLofSlice(measure_slice['score'], measure_slice['start'], measure_slice['end'])},
     entry = db["tasks"].insert_one(task).inserted_id
 
     pathlib.Path(api_folder + "/static/" + task['score'] + "/slices/measures/").mkdir(parents=True, exist_ok=True)
@@ -195,6 +196,83 @@ def main():
                                 'sent message to ce_communicator for ',
                                 task_id)
                     create_context_for_tasks(score)
+            status_data = read_message('task_scheduler_status_queue')
+            if status_data != '':
+                # get status update from api,
+                # new result received
+                # check if task is verify or edit,
+                # if enough, then send msg to aggregator
+                if status_data['module'] == 'api':
+                    tasks_col = db['tasks']
+                    tasks_query = {"_id": ObjectId(status_data['identifier'])}
+                    tasks_doc = tasks_col.find_one(tasks_query)
+
+                    if (tasks_doc['status'] == 'annotation') and (status_data['type'] == 'edit'):
+                        mycol = db['results']
+                        myquery = {
+                            "task_id": status_data['identifier'],
+                            "result_type": "edit"}
+                        mydoc = mycol.find(myquery)
+                        if mydoc.count() > 2:
+                            send_message(
+                                'aggregator_xml_queue',
+                                'aggregator_xml_queue',
+                                json.dumps({'task_id': status_data['identifier']})
+                                )
+                    elif (tasks_doc['status'] == 'verification') and (status_data['type'] == 'verify'):
+                        mycol = db['results']
+                        myquery = {
+                            "task_id": status_data['identifier'],
+                            "result_type": "verify"}
+                        mydoc = mycol.find(myquery)
+                        results_count = mydoc.count()
+
+                        mycol = db['results']
+                        myquery = {
+                            "task_id": status_data['identifier'],
+                            "result_type": "verify",
+                            "opinion": True}
+                        mydoc = mycol.find(myquery)
+                        results_count_true = mydoc.count()
+
+                        ratio = results_count_true / results_count
+
+                        if (results_count >= 3) and (ratio >= 0.6):
+                            mycol = db['tasks']
+                            myquery = {"_id": ObjectId(status_data['identifier'])}
+
+                            update_thing = {'$set': {'status': "complete"}}
+                            mydoc = mycol.update_one(myquery, update_thing)
+                        elif (results_count >= 3) and (ratio < 0.6):
+                            mycol = db['tasks']
+                            myquery = {"_id": ObjectId(status_data['identifier'])}
+
+                            update_thing = {'$set': {'status': "annotation"}}
+                            mydoc = mycol.update_one(myquery, update_thing)
+
+                            # delete documents with verification results
+                            mycol = db['results']
+                            myquery = {
+                                "task_id": status_data['identifier'],
+                                "result_type": "verify"}
+                            mydoc = mycol.delete_many(myquery)
+                if status_data['module'] == 'aggregator_xml':
+                    if status_data['status'] == 'complete':
+                        mycol = db['tasks']
+                        myquery = {"_id": ObjectId(status_data['_id'])}
+
+                        update_thing = {'$set': {'status': "verification"}}
+                        mydoc = mycol.update_one(myquery, update_thing)
+                # if verify task, then count how many and then mark complete
+                # if majority say that it is wrong, then set edit task as incomplete
+
+                # get status update from aggregator
+                # mark task as complete
+                # send msg to ce_comm
+                # create verify task ce
+                # update xml of task?
+
+
                 # elif(data['action'] == 'create_edit_tasks'):
                 #     print('creating verify task')
 

@@ -19,7 +19,15 @@ def callback(ch, method, properties, body):
     client = MongoClient(settings.mongo_address[0], int(settings.mongo_address[1]))
     db = client.trompa_test
 
-    results = db[settings.result_collection_name].find_one({"task_id" : task_id})["results"]
+    results = []
+
+    results_json = db[settings.result_collection_name].find({
+        "task_id": task_id,
+        "result_type": "edit"})
+    for thing in results_json:
+        results.append(thing['xml'])
+
+    # results = db[settings.result_collection_name].find({"task_id" : task_id})
 
     aligned_trees = ta.align_trees_multiple(results)
 
@@ -27,9 +35,9 @@ def callback(ch, method, properties, body):
 
     # Update task status
     status_update_msg = {
-    '_id': task_id,
-    'module': 'aggregator_xml',
-    'status': 'complete'
+        '_id': task_id,
+        'module': 'aggregator_xml',
+        'status': 'complete'
     }
 
     # For now, only consider the tree to be good enough if consensus was reached for every node

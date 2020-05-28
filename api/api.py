@@ -160,6 +160,7 @@ def taskpost(variable):
     mydb = myclient[MONGO_DB]
     mycol = mydb["results"]
     opinion = 'xml' if 'v' not in request.args else (request.args['v'] == "1")
+    result_type = "verify" if 'v' in request.args else "edit"
     result = {
         "task_id": variable,
         "xml": str(request.get_data(as_text=True)),
@@ -168,127 +169,136 @@ def taskpost(variable):
         "result_type": "verify" if 'v' in request.args else "edit",
         "opinion": 'xml' if 'v' not in request.args else (request.args['v'] == "1")
     }
-    entry = mycol.insert_one(result)
+    mycol.insert_one(result)
 
-    # check if the task is complete
-    mycol_other = mydb['submitted_tasks']
-    task_status = mycol_other.find({"task_id": variable, "type": result['result_type']})
-    if task_status.count() > 0:
-        if task_status[0]['status'] != "complete" and opinion == 'xml':
-            xml_in = str(request.get_data(as_text=True))
-            other_entry = mycol_other.update_one(
-                {"task_id": variable, "type": result['result_type']},
-                {'$push': {'xml': xml_in}},
-                upsert=True)
-            count = len(task_status[0]['xml'])
-            if(count == 1):
-                # set status of controlaction to active
-                send_message(
-                    'ce_communicator_queue',
-                    'ce_communicator_queue',
-                    json.dumps({
-                        'action': 'task active',
-                        'identifier': variable,
-                        'type': 'edit',
-                        'status': 'ActiveActionStatus'}))
-            if(count > 1):
-                x = 0
-                for x in range(0, count - 1):
-                    xml_string1 = re.sub(r'\s+', ' ', task_status[0]['xml'][x])
-                    xml_string2 = re.sub(r'\s+', ' ', xml_in)
+    send_message(
+        'task_scheduler_status_queue',
+        'task_scheduler_status_queue',
+        json.dumps({
+            'action': 'result',
+            'module': 'api',
+            'identifier': variable,
+            'type': result_type}))
 
-                    tree1 = etree.fromstring(xml_string1)
-                    tree2 = etree.fromstring(xml_string2)
-                    diff = main.diff_trees(tree1, tree2)
-                    # check is the new one matches one of the known ones
-                    print("compare xml diff ", len(diff))
-                    if(len(diff) == 0):
-                        # if two match then save the result
-                        # in result_agg collection
-                        results_agg_coll = mydb['results_agg']
-                        good_result = {
-                            "task_id": variable,
-                            "xml": xml_string2
-                        }
-                        results_agg_coll.insert_one(good_result)
-                        # mark the submitted task done
-                        mycol_other.update_one(
-                            {
-                                "task_id": variable
-                            }, {
-                                '$set': {
-                                    'status': "complete"
-                                }
-                            })
-                        # send message to omr_planner
-                        tasks_coll = mydb['tasks']
-                        task = tasks_coll.find_one({"_id": ObjectId(variable)})
-                        status_update_msg = {
-                            '_id': variable,
-                            'module': 'aggregator',
-                            'status': 'complete',
-                            'name': task['score']}
-                        send_message(
-                            'omr_planner_status_queue',
-                            'omr_planner_status_queue',
-                            json.dumps(status_update_msg))
-                        send_message(
-                            'ce_communicator_queue',
-                            'ce_communicator_queue',
-                            json.dumps({
-                                'action': 'task completed',
-                                'identifier': variable,
-                                'type': 'edit',
-                                'status': 'CompletedActionStatus'}))
-                        if(opinion == 'xml'):
-                            a = mydb['tasks']
-                            xml_in = str(request.get_data(as_text=True))
-                            c = a.update_one(
-                                {"_id": ObjectId(variable)},
-                                {'$set': {'xml': xml_in}},
-                                upsert=True)
-                            send_message(
-                                'ce_communicator_queue',
-                                'ce_communicator_queue',
-                                json.dumps({
-                                    'action': 'verify task created',
-                                    '_id': variable}))
-            if(count == 1):
-                mycol_other.update_one(
-                    {"task_id": variable, "type": result['result_type']},
-                    {'$set': {'status': "processing"}})
-        elif task_status[0]['status'] != "complete" and opinion != 'xml':
-            mycoll = mydb['results']
-            query = {"task_id": variable, 'result_type': 'verify'}
-            # query = {"task_id": variable, "opinion": True}
-            mydoc = mycol.find(query)
-            if(mydoc.count() == 1):
-                mycol_other.update_one(
-                    {"task_id": variable, "type": result['result_type']},
-                    {'$set': {'status': "processing"}})
-                # set status of controlaction to active
-                send_message(
-                    'ce_communicator_queue',
-                    'ce_communicator_queue',
-                    json.dumps({
-                        'action': 'task active',
-                        'identifier': variable,
-                        'type': 'verify',
-                        'status': 'ActiveActionStatus'}))
-            mycoll = mydb['results']
-            query = {"task_id": variable, "opinion": True}
-            if(mydoc.count() > 1):
-                mycol_other.update_one(
-                    {"task_id": variable, "type": result['result_type']},
-                    {'$set': {'status': "complete"}})
-                send_message(
-                    'ce_communicator_queue',
-                    'ce_communicator_queue',
-                    json.dumps({
-                        'action': 'task completed',
-                        'identifier': variable,
-                        'type': 'verify',
-                        'status': 'CompletedActionStatus'}))
+    # # check if the task is complete
+    # mycol_other = mydb['submitted_tasks']
+    # task_status = mycol_other.find({"task_id": variable, "type": result['result_type']})
+    # if task_status.count() > 0:
+    #     if task_status[0]['status'] != "complete" and opinion == 'xml':
+    #         xml_in = str(request.get_data(as_text=True))
+    #         other_entry = mycol_other.update_one(
+    #             {"task_id": variable, "type": result['result_type']},
+    #             {'$push': {'xml': xml_in}},
+    #             upsert=True)
+    #         count = len(task_status[0]['xml'])
+    #         if(count == 1):
+    #             # set status of controlaction to active
+    #             send_message(
+    #                 'ce_communicator_queue',
+    #                 'ce_communicator_queue',
+    #                 json.dumps({
+    #                     'action': 'task active',
+    #                     'identifier': variable,
+    #                     'type': 'edit',
+    #                     'status': 'ActiveActionStatus'}))
+    #         if(count > 1):
+    #             x = 0
+    #             for x in range(0, count - 1):
+    #                 xml_string1 = re.sub(r'\s+', ' ', task_status[0]['xml'][x])
+    #                 xml_string2 = re.sub(r'\s+', ' ', xml_in)
+
+    #                 tree1 = etree.fromstring(xml_string1)
+    #                 tree2 = etree.fromstring(xml_string2)
+    #                 diff = main.diff_trees(tree1, tree2)
+    #                 # check is the new one matches one of the known ones
+    #                 print("compare xml diff ", len(diff))
+    #                 if(len(diff) == 0):
+    #                     # if two match then save the result
+    #                     # in result_agg collection
+    #                     results_agg_coll = mydb['results_agg']
+    #                     good_result = {
+    #                         "task_id": variable,
+    #                         "xml": xml_string2
+    #                     }
+    #                     results_agg_coll.insert_one(good_result)
+    #                     # mark the submitted task done
+    #                     mycol_other.update_one(
+    #                         {
+    #                             "task_id": variable
+    #                         }, {
+    #                             '$set': {
+    #                                 'status': "complete"
+    #                             }
+    #                         })
+    #                     # send message to omr_planner
+    #                     tasks_coll = mydb['tasks']
+    #                     task = tasks_coll.find_one({"_id": ObjectId(variable)})
+    #                     status_update_msg = {
+    #                         '_id': variable,
+    #                         'module': 'aggregator',
+    #                         'status': 'complete',
+    #                         'name': task['score']}
+    #                     send_message(
+    #                         'omr_planner_status_queue',
+    #                         'omr_planner_status_queue',
+    #                         json.dumps(status_update_msg))
+    #                     send_message(
+    #                         'ce_communicator_queue',
+    #                         'ce_communicator_queue',
+    #                         json.dumps({
+    #                             'action': 'task completed',
+    #                             'identifier': variable,
+    #                             'type': 'edit',
+    #                             'status': 'CompletedActionStatus'}))
+    #                     if(opinion == 'xml'):
+    #                         a = mydb['tasks']
+    #                         xml_in = str(request.get_data(as_text=True))
+    #                         c = a.update_one(
+    #                             {"_id": ObjectId(variable)},
+    #                             {'$set': {'xml': xml_in}},
+    #                             upsert=True)
+    #                         send_message(
+    #                             'ce_communicator_queue',
+    #                             'ce_communicator_queue',
+    #                             json.dumps({
+    #                                 'action': 'verify task created',
+    #                                 '_id': variable}))
+    #         if(count == 1):
+    #             mycol_other.update_one(
+    #                 {"task_id": variable, "type": result['result_type']},
+    #                 {'$set': {'status': "processing"}})
+    #     elif task_status[0]['status'] != "complete" and opinion != 'xml':
+    #         mycoll = mydb['results']
+    #         query = {"task_id": variable, 'result_type': 'verify'}
+    #         # query = {"task_id": variable, "opinion": True}
+    #         mydoc = mycol.find(query)
+    #         if(mydoc.count() == 1):
+    #             mycol_other.update_one(
+    #                 {"task_id": variable, "type": result['result_type']},
+    #                 {'$set': {'status': "processing"}})
+    #             # set status of controlaction to active
+    #             send_message(
+    #                 'ce_communicator_queue',
+    #                 'ce_communicator_queue',
+    #                 json.dumps({
+    #                     'action': 'task active',
+    #                     'identifier': variable,
+    #                     'type': 'verify',
+    #                     'status': 'ActiveActionStatus'}))
+    #         mycoll = mydb['results']
+    #         query = {"task_id": variable, "opinion": True}
+    #         if(mydoc.count() > 1):
+    #             mycol_other.update_one(
+    #                 {"task_id": variable, "type": result['result_type']},
+    #                 {'$set': {'status': "complete"}})
+    #             send_message(
+    #                 'ce_communicator_queue',
+    #                 'ce_communicator_queue',
+    #                 json.dumps({
+    #                     'action': 'task completed',
+    #                     'identifier': variable,
+    #                     'type': 'verify',
+    #                     'status': 'CompletedActionStatus'}))
     resp = jsonify(success=True)
     return resp
 
