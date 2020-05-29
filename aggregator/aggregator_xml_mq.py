@@ -33,6 +33,7 @@ def callback(ch, method, properties, body):
 
     final_tree, consensus_per_node = ta.build_consensus_tree(aligned_trees)
 
+    # print(final_tree.toprettyxml())
     # Update task status
     status_update_msg = {
         '_id': task_id,
@@ -43,7 +44,15 @@ def callback(ch, method, properties, body):
     # For now, only consider the tree to be good enough if consensus was reached for every node
     if sum(consensus_per_node.values()) < len(consensus_per_node):
         status_update_msg['status'] = 'failed'
-    
+    else:
+        # store aggregated result in db
+        results_agg_coll = db['results_agg']
+        result_agg = {
+            'task_id': task_id,
+            'xml': str(final_tree.toprettyxml())
+        }
+        results_agg_coll.update_one({'task_id': task_id}, {'$set': result_agg}, True)
+
     global channel
     channel.queue_declare(queue=settings.task_status_queue_name)
     channel.basic_publish(exchange="", routing_key=settings.task_status_queue_name, body=json.dumps(status_update_msg))

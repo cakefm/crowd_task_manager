@@ -213,7 +213,16 @@ def main():
                             "task_id": status_data['identifier'],
                             "result_type": "edit"}
                         mydoc = mycol.find(myquery)
-                        if mydoc.count() > 2:
+                        if (mydoc.count() == 1):
+                            send_message(
+                                'ce_communicator_queue',
+                                'ce_communicator_queue',
+                                json.dumps({
+                                    'action': 'task active',
+                                    'identifier': status_data['identifier'],
+                                    'type': 'edit',
+                                    'status': 'ActiveActionStatus'}))
+                        elif mydoc.count() > 2:
                             send_message(
                                 'aggregator_xml_queue',
                                 'aggregator_xml_queue',
@@ -243,6 +252,27 @@ def main():
 
                             update_thing = {'$set': {'status': "complete"}}
                             mydoc = mycol.update_one(myquery, update_thing)
+
+                            send_message(
+                                'ce_communicator_queue',
+                                'ce_communicator_queue',
+                                json.dumps({
+                                    'action': 'task completed',
+                                    'identifier': status_data['identifier'],
+                                    'type': 'verify',
+                                    'status': 'CompletedActionStatus'}))
+
+                            mycol = db['tasks']
+                            myquery = {"_id": ObjectId(status_data['identifier'])}
+                            mydoc = mycol.find_one(myquery)
+
+                            send_message(
+                                'omr_planner_status_queue',
+                                'omr_planner_status_queue',
+                                json.dumps({
+                                    'module': 'task_scheduler',
+                                    'task_id': status_data['identifier'],
+                                    'name': mydoc['score']}))
                         elif (results_count >= 3) and (ratio < 0.6):
                             mycol = db['tasks']
                             myquery = {"_id": ObjectId(status_data['identifier'])}
@@ -256,13 +286,63 @@ def main():
                                 "task_id": status_data['identifier'],
                                 "result_type": "verify"}
                             mydoc = mycol.delete_many(myquery)
+
+                            mycol = db['results']
+                            myquery = {
+                                "task_id": status_data['identifier'],
+                                "result_type": "edit"}
+                            mydoc = mycol.delete_many(myquery)
+
+                            send_message(
+                                'ce_communicator_queue',
+                                'ce_communicator_queue',
+                                json.dumps({
+                                    'action': 'task completed',
+                                    'identifier': status_data['identifier'],
+                                    'type': 'verify',
+                                    'status': 'FailedActionStatus'}))
+                            send_message(
+                                'ce_communicator_queue',
+                                'ce_communicator_queue',
+                                json.dumps({
+                                    'action': 'task completed',
+                                    'identifier': status_data['identifier'],
+                                    'type': 'edit',
+                                    'status': 'PotentialActionStatus'}))
                 if status_data['module'] == 'aggregator_xml':
                     if status_data['status'] == 'complete':
+                        mycol = db['results_agg']
+                        myquery = {"task_id": status_data['_id']}
+                        new_xml = mycol.find_one(myquery)['xml']
+
                         mycol = db['tasks']
                         myquery = {"_id": ObjectId(status_data['_id'])}
-
-                        update_thing = {'$set': {'status': "verification"}}
+                        update_thing = {'$set': {'status': "verification", 'xml': new_xml}}
                         mydoc = mycol.update_one(myquery, update_thing)
+
+                        send_message(
+                            'ce_communicator_queue',
+                            'ce_communicator_queue',
+                            json.dumps({
+                                'action': 'task completed',
+                                'identifier': status_data['_id'],
+                                'type': 'edit',
+                                'status': 'CompletedActionStatus'}))
+
+                        send_message(
+                            'ce_communicator_queue',
+                            'ce_communicator_queue',
+                            json.dumps({
+                                'action': 'verify task created',
+                                '_id': status_data['_id']}))
+                    if status_data['status'] == 'failed':
+                        # delete documents with verification results
+                        mycol = db['results']
+                        myquery = {
+                            "task_id": status_data['_id'],
+                            "result_type": "edit"}
+                        mydoc = mycol.delete_many(myquery)
+
                 # if verify task, then count how many and then mark complete
                 # if majority say that it is wrong, then set edit task as incomplete
 

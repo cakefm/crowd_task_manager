@@ -151,7 +151,7 @@ def main():
                             'name': score_status['name'],
                             'action': 'create_edit_tasks'}))
                     continue
-                if score_status['module'] == 'aggregator':
+                if score_status['module'] == 'task_scheduler':
                     # send message to score_rebuilder_queue
                     print(
                         datetime.now(),

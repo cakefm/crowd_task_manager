@@ -188,7 +188,7 @@ def create_controlaction_verify(task_id):
         'type': 'verify'
     }
     submitted_task_coll = mydb['submitted_tasks']
-    submitted_task_coll.insert_one(submitted_task)
+    submitted_task_coll.update_one({'task_id': task_id, 'type': 'verify'}, {'$set': submitted_task}, True)
 
 
 def update_control_action_status(identifier, action_status, task_type):
