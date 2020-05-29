@@ -5,6 +5,7 @@ import json
 sys.path.append("..")
 import common.settings as settings
 import common.file_system_manager as fsm
+import common.tree_tools as tt
 import xml.dom.minidom as xml
 
 from pymongo import MongoClient
@@ -33,11 +34,11 @@ def callback(ch, method, properties, body):
     for measure in mei_measures:
         mei_n = measure.attributes["n"].value
         if mei_n in aggregated_dict:
-            measure.childNodes = aggregated_dict[mei_n].childNodes
+            tt.replace_child_nodes(measure, aggregated_dict[mei_n].childNodes)
 
     # Write MEI file
     with open(str(mei_path), 'w') as mei_file:
-        mei_file.write(mei_xml.toxml())
+        mei_file.write(tt.purge_non_element_nodes(mei_xml.documentElement).toprettyxml())
 
     status_update_msg = {
     '_id': sheet_id,
