@@ -428,7 +428,6 @@ def upload_sheet():
 
             result = {
                 "name": os.path.splitext(file.filename)[0],
-                "description": request.form['description'],
                 "sheet_path": str(sheet_path),
                 "ts": datetime.now(),
                 "submitted_mei_path": str(mei_path)
@@ -441,18 +440,18 @@ def upload_sheet():
                 'omr_planner_queue',
                 json.dumps(message))
 
-            return redirect(url_for('uploaded_file', filename=sheet_path_temp))
+            return '''
+                <!doctype html>
+                <title>Upload new File</title>
+                <h1>PDF Uploaded successfully</h1>
+                '''
+
 
     return '''
     <!doctype html>
     <title>Upload new File</title>
     <h1>Upload music score PDF</h1>
     <form method=post enctype=multipart/form-data>
-        Name: <br>
-        <input type=text name=name value="">
-        <br>
-        Description: <br>
-        <input type=text name=description value=""><br>
         PDF: <br><input type=file name=file><br>
         MEI(Optional): <br><input type=file name=mei>
         <input type=submit value=Upload>

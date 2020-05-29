@@ -271,7 +271,7 @@ def main():
                                 'omr_planner_status_queue',
                                 json.dumps({
                                     'module': 'task_scheduler',
-                                    'task_id': status_data['identifier'],
+                                    '_id': status_data['identifier'],
                                     'name': mydoc['score']}))
                         elif (results_count >= 3) and (ratio < 0.6):
                             mycol = db['tasks']

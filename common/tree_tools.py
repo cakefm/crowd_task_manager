@@ -250,6 +250,6 @@ def replace_child_nodes(tree, new_child_nodes):
     '''
     for child in [c for c in tree.childNodes]:
         tree.removeChild(child)
-    for child in new_child_nodes:
+    for child in list(new_child_nodes):
         tree.appendChild(child)
     return tree
