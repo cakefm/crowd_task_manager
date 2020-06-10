@@ -53,7 +53,7 @@ def read_message(queue_name):
     return msg
 
 
-def create_task_from_slice(measure_slice):
+def create_task_from_slice(measure_slice, status):
     begin = measure_slice['start']
     end = measure_slice['end']
     difference = end - begin
@@ -65,7 +65,7 @@ def create_task_from_slice(measure_slice):
         'score': measure_slice['score'],
         'slice_id': str(measure_slice['_id']),
         'image_path': measure_slice['score'] + subfolder + measure_slice['name'],
-        'status': 'annotation',
+        'status': status,
         'xml': getXMLofSlice(measure_slice['score'], measure_slice['start'], measure_slice['end'])},
     entry = db["tasks"].insert_one(task).inserted_id
 
@@ -84,12 +84,12 @@ def getXMLofSlice(score, slice_begin_n, slice_end_n):
     # measure_tag_begin = "<measure>"
     # measure_tag_end = "</measure>"
     measure_tag_begin = ""
-    measure_tag_end = "></measure>"
+    measure_tag_end = ""
     for x in range(slice_begin_n, slice_end_n):
         if(len(mydoc['measures'][x]['xml']) > 0):
             end_xml = end_xml + \
                 measure_tag_begin + \
-                mydoc['measures'][x]['xml'][:-2] + \
+                mydoc['measures'][x]['xml'] + \
                 measure_tag_end
     return end_xml
 
@@ -188,13 +188,26 @@ def main():
                     for measure_slice in mydoc:
                         slice_length = measure_slice['end'] - measure_slice['start']
                         if(slice_length == 1):
-                            task_id = create_task_from_slice(measure_slice)
-                            print(datetime.now(), 'edit created task ', task_id)
-                            submit_task_to_ce(task_id)
-                            print(
-                                datetime.now(),
-                                'sent message to ce_communicator for ',
-                                task_id)
+                            mycol2 = db['sheets']
+                            myquery2 = {"name": score}
+                            mydoc2 = mycol2.find_one(myquery2)
+                            status = 'verification' if (mydoc2['edit_action'] == mydoc2['verify_action']) else 'annotation'
+
+                            task_id = create_task_from_slice(measure_slice, status)
+                            print(datetime.now(), 'created task ', task_id)
+                            if((mydoc2['source'] == 'CE') and (mydoc2['edit_action'] != mydoc2['verify_action']) ):
+                                submit_task_to_ce(task_id)
+                                print(
+                                    datetime.now(),
+                                    'sent message to ce_communicator for ',
+                                    task_id)
+                            elif((mydoc2['source'] == 'CE') and (mydoc2['edit_action'] == mydoc2['verify_action']) ):
+                                send_message(
+                                    'ce_communicator_queue',
+                                    'ce_communicator_queue',
+                                    json.dumps({
+                                        'action': 'verify task created',
+                                        '_id': task_id}))
                     create_context_for_tasks(score)
             status_data = read_message('task_scheduler_status_queue')
             if status_data != '':
@@ -214,14 +227,18 @@ def main():
                             "result_type": "edit"}
                         mydoc = mycol.find(myquery)
                         if (mydoc.count() == 1):
-                            send_message(
-                                'ce_communicator_queue',
-                                'ce_communicator_queue',
-                                json.dumps({
-                                    'action': 'task active',
-                                    'identifier': status_data['identifier'],
-                                    'type': 'edit',
-                                    'status': 'ActiveActionStatus'}))
+                            mycol2 = db['sheets']
+                            myquery2 = {"name": tasks_doc['score']}
+                            mydoc2 = mycol2.find_one(myquery2)
+                            if(mydoc2['source'] == 'CE'):
+                                send_message(
+                                    'ce_communicator_queue',
+                                    'ce_communicator_queue',
+                                    json.dumps({
+                                        'action': 'task active',
+                                        'identifier': status_data['identifier'],
+                                        'type': 'edit',
+                                        'status': 'ActiveActionStatus'}))
                         elif mydoc.count() > 2:
                             send_message(
                                 'aggregator_xml_queue',
@@ -253,14 +270,18 @@ def main():
                             update_thing = {'$set': {'status': "complete"}}
                             mydoc = mycol.update_one(myquery, update_thing)
 
-                            send_message(
-                                'ce_communicator_queue',
-                                'ce_communicator_queue',
-                                json.dumps({
-                                    'action': 'task completed',
-                                    'identifier': status_data['identifier'],
-                                    'type': 'verify',
-                                    'status': 'CompletedActionStatus'}))
+                            mycol2 = db['sheets']
+                            myquery2 = {"name": tasks_doc['score']}
+                            mydoc2 = mycol2.find_one(myquery2)
+                            if(mydoc2['source'] == 'CE'):
+                                send_message(
+                                    'ce_communicator_queue',
+                                    'ce_communicator_queue',
+                                    json.dumps({
+                                        'action': 'task completed',
+                                        'identifier': status_data['identifier'],
+                                        'type': 'verify',
+                                        'status': 'CompletedActionStatus'}))
 
                             mycol = db['tasks']
                             myquery = {"_id": ObjectId(status_data['identifier'])}
@@ -293,22 +314,27 @@ def main():
                                 "result_type": "edit"}
                             mydoc = mycol.delete_many(myquery)
 
-                            send_message(
-                                'ce_communicator_queue',
-                                'ce_communicator_queue',
-                                json.dumps({
-                                    'action': 'task completed',
-                                    'identifier': status_data['identifier'],
-                                    'type': 'verify',
-                                    'status': 'FailedActionStatus'}))
-                            send_message(
-                                'ce_communicator_queue',
-                                'ce_communicator_queue',
-                                json.dumps({
-                                    'action': 'task completed',
-                                    'identifier': status_data['identifier'],
-                                    'type': 'edit',
-                                    'status': 'PotentialActionStatus'}))
+                            mycol2 = db['sheets']
+                            myquery2 = {"name": tasks_doc['score']}
+                            mydoc2 = mycol2.find_one(myquery2)
+                            if(mydoc2['source'] == 'CE'):
+                                send_message(
+                                    'ce_communicator_queue',
+                                    'ce_communicator_queue',
+                                    json.dumps({
+                                        'action': 'task completed',
+                                        'identifier': status_data['identifier'],
+                                        'type': 'verify',
+                                        'status': 'FailedActionStatus'}))
+                                if(mydoc2['edit_action'] != mydoc2['verify_action']):
+                                    send_message(
+                                        'ce_communicator_queue',
+                                        'ce_communicator_queue',
+                                        json.dumps({
+                                            'action': 'task completed',
+                                            'identifier': status_data['identifier'],
+                                            'type': 'edit',
+                                            'status': 'PotentialActionStatus'}))
                 if status_data['module'] == 'aggregator_xml':
                     if status_data['status'] == 'complete':
                         mycol = db['results_agg']
@@ -319,22 +345,27 @@ def main():
                         myquery = {"_id": ObjectId(status_data['_id'])}
                         update_thing = {'$set': {'status': "verification", 'xml': new_xml}}
                         mydoc = mycol.update_one(myquery, update_thing)
+                        tasks_doc = mycol.find_one(myquery)
 
-                        send_message(
-                            'ce_communicator_queue',
-                            'ce_communicator_queue',
-                            json.dumps({
-                                'action': 'task completed',
-                                'identifier': status_data['_id'],
-                                'type': 'edit',
-                                'status': 'CompletedActionStatus'}))
+                        mycol2 = db['sheets']
+                        myquery2 = {"name": tasks_doc['score']}
+                        mydoc2 = mycol2.find_one(myquery2)
+                        if(mydoc2['source'] == 'CE'):
+                            send_message(
+                                'ce_communicator_queue',
+                                'ce_communicator_queue',
+                                json.dumps({
+                                    'action': 'task completed',
+                                    'identifier': status_data['_id'],
+                                    'type': 'edit',
+                                    'status': 'CompletedActionStatus'}))
 
-                        send_message(
-                            'ce_communicator_queue',
-                            'ce_communicator_queue',
-                            json.dumps({
-                                'action': 'verify task created',
-                                '_id': status_data['_id']}))
+                            send_message(
+                                'ce_communicator_queue',
+                                'ce_communicator_queue',
+                                json.dumps({
+                                    'action': 'verify task created',
+                                    '_id': status_data['_id']}))
                     if status_data['status'] == 'failed':
                         # delete documents with verification results
                         mycol = db['results']

@@ -512,6 +512,7 @@ def download_from_url():
             result = {
                 "name": os.path.splitext(filename)[0],
                 "description": request.form['description'],
+                "source": "UI",
                 "sheet_path": str(sheet_path),
                 "ts": datetime.now()
             }

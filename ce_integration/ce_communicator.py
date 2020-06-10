@@ -54,7 +54,7 @@ def allowed_file(filename):
         filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 
-def store_sheet(source):
+def store_sheet(source, potentialActionIdentifier):
     a = urlparse(source)
     filename = os.path.basename(a.path)
     name_only = os.path.splitext(filename)[0]
@@ -79,7 +79,10 @@ def store_sheet(source):
             "name": os.path.splitext(filename)[0],
             "description": "retreived from CE",
             "sheet_path": str(sheet_path),
-            "ts": datetime.now()
+            "ts": datetime.now(),
+            "source": "CE",
+            "edit_action": potentialActionIdentifier,
+            "verify_action": potentialActionIdentifier
         }
         entry = mycol.insert_one(result).inserted_id
         return str(entry)
@@ -107,12 +110,13 @@ def poll_controlactions():
         if len(action["object"]) > 0:
             name = action['object'][0]['nodeValue']['name']
             source = action['object'][0]['nodeValue']['source']
+            potentialActionIdentifier = action['object'][1]['value']
             name_only = os.path.splitext(name)[0]
             # print(name_only)
             # TODO: check if filename is pdf or other allowed format
             if name_only not in known_scores:
                 print(name_only, " not currently known")
-                identifier = store_sheet(source)
+                identifier = store_sheet(source, potentialActionIdentifier)
                 known_scores.append(name_only)
                 message = {'score_name': name, '_id': identifier}
                 add_to_queue('omr_planner_queue', 'omr_planner_queue', json.dumps(message))
@@ -131,10 +135,15 @@ def create_controlaction(task_id):
     task_url = SERVER_ADDRESS + 'edit/' + task_id
     actionStatus = "PotentialActionStatus"
 
+    mycol2 = mydb["sheets"]
+    query2 = {"name": result['name']}
+    mysheet = mycol2.find_one(query2)
+    potential_action = mysheet['edit_action']
+
     # submit task data to ce
     url = CE_SERVER
     payload = "{\"query\":\"mutation {\\n   RequestControlAction(\\n       controlAction: {\\n           entryPointIdentifier: \\\"%s\\\"\\n           potentialActionIdentifier: \\\"%s\\\"\\n           potentialAction: {\\n               name: \\\"%s\\\"\\n               url: \\\"%s\\\"\\n           }\\n       }\\n   ) {\\n       identifier\\n   }\\n}\\n\"}"
-    payload = payload % (ENTRYPOINT_ID, PROCESSING_POTENTIALACTION_ID, name, task_url)
+    payload = payload % (ENTRYPOINT_ID, potential_action, name, task_url)
     headers = headers = {'content-type': 'application/json'}
     response = requests.request("POST", url, data=payload, headers=headers)
     data = json.loads(response.text)
@@ -167,10 +176,15 @@ def create_controlaction_verify(task_id):
     task_url = SERVER_ADDRESS + 'verify/' + task_id
     actionStatus = "PotentialActionStatus"
 
+    mycol2 = mydb["sheets"]
+    query2 = {"name": result['name']}
+    mysheet = mycol2.find_one(query2)
+    potential_action = mysheet['verify_action']
+
     # submit task data to ce
     url = CE_SERVER
     payload = "{\"query\":\"mutation {\\n   RequestControlAction(\\n       controlAction: {\\n           entryPointIdentifier: \\\"%s\\\"\\n           potentialActionIdentifier: \\\"%s\\\"\\n           potentialAction: {\\n               name: \\\"%s\\\"\\n               url: \\\"%s\\\"\\n           }\\n       }\\n   ) {\\n       identifier\\n   }\\n}\\n\"}"
-    payload = payload % (ENTRYPOINT_ID, VERIFY_POTENTIALACTION_ID, name, task_url)
+    payload = payload % (ENTRYPOINT_ID, potential_action, name, task_url)
     headers = headers = {'content-type': 'application/json'}
     response = requests.request("POST", url, data=payload, headers=headers)
     data = json.loads(response.text)
