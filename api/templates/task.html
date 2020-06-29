@@ -6,6 +6,7 @@
         <script src="{{url_for('static', filename='lib/verovio-toolkit.js')}}"></script>
         <script src="https://cdn.jsdelivr.net/gh/google/code-prettify@master/loader/run_prettify.js"></script>
         <link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">
+        <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
         <script>
         	function myFunction() {
         		var code = window.myCodeMirror.getValue();
@@ -51,7 +52,7 @@
 				var pre_xml = '<?xml version="1.0" encoding="UTF-8"?><?xml-model href="https://music-encoding.org/schema/4.0.0/mei-all.rng" type="application/xml" schematypens="http://relaxng.org/ns/structure/1.0"?><?xml-model href="https://music-encoding.org/schema/4.0.0/mei-all.rng" type="application/xml" schematypens="http://purl.oclc.org/dsdl/schematron"?><mei xmlns="http://www.music-encoding.org/ns/mei" meiversion="4.0.0"><meiHead><fileDesc><titleStmt><title>32 VARIATIONEN</title><title type="subordinate" n="1">c-moll</title><title type="subordinate" n="2" label="Opus number">WoO 80</title><respStmt><persName role="composer">Ludwig van Beethoven</persName><persName role="encoder" enddate="2018-11-29T21:16:10">Werner Goebl</persName></respStmt></titleStmt><pubStmt/></fileDesc><encodingDesc xml:id="encodingdesc-0000001205577039"><appInfo xml:id="appinfo-0000001492290593"><application xml:id="application-0000001245369466" isodate="2018-11-23T11:17:35" version="2.0.0-dev-e42e3a6"><name xml:id="name-0000000401085565">Verovio</name><p xml:id="p-0000001059740050">Transcoded from MusicXML</p></application></appInfo></encodingDesc></meiHead><music><body><mdiv xml:id="mdiv-0000000720917863"><score xml:id="score-0000000926025859"><scoreDef xml:id="scoredef-0000000962089473" meter.count="3" meter.unit="4" key.mode="major" key.sig="3f"><staffGrp xml:id="staffgrp-0000001520233015" symbol="brace" label="." bar.thru="true"><staffDef xml:id="staffdef-0000000421725253" clef.shape="G" clef.line="2" n="1" lines="5"><instrDef xml:id="instrdef-0000000255494442" midi.channel="0" midi.instrnum="0" midi.volume="79.00%"/></staffDef><staffDef xml:id="staffdef-0000001701180460" clef.shape="F" clef.line="4" n="2" lines="5"><instrDef xml:id="instrdef-0000000070220525" midi.channel="1" midi.instrnum="0" midi.volume="74.00%"/></staffDef></staffGrp></scoreDef><section xml:id="section-WoO80"><section xml:id="section-Thema" n="0" label="Thema">'
 			var post_xml = '</section></section></score></mdiv></body></music></mei>'
 
-			var post_xml = '</section></section></section></score></mdiv></body></music></mei>'
+			// var post_xml = '</section></section></section></score></mdiv></body></music></mei>'
 				vrvToolkit.loadData(pre_xml + decode(window.myCodeMirror.getValue()) + post_xml);
 	        	// var svg = vrvToolkit.renderData(pre_xml + decode(window.myCodeMirror.getValue()) + post_xml, options);
 	        	vrvToolkit.renderToSVG(1, options);

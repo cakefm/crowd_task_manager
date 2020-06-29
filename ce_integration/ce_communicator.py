@@ -89,6 +89,7 @@ def store_sheet(source, potentialActionIdentifier):
 
 
 def poll_controlactions():
+    print(datetime.now(), "polling controlActions")
     url = CE_SERVER
     payload = "{\"query\":\"query {\\n  ControlAction{\\n    identifier\\n    name\\n    actionStatus\\n    url\\n    target {\\n      ... on EntryPoint {\\n        identifier\\n        name\\n      }\\n    }\\n    wasDerivedFrom{\\n      __typename\\n      identifier\\n      \\n    }\\n    object {\\n      __typename\\n      ... on PropertyValue {\\n        name\\n        identifier\\n        valueReference\\n        value\\n        nodeValue {\\n          __typename\\n          ... on DigitalDocument {\\n            name\\n            identifier\\n            source\\n          }\\n        }\\n      }\\n    }\\n  }\\n}\\n\"}"
     headers = headers = {'content-type': 'application/json'}
@@ -107,18 +108,21 @@ def poll_controlactions():
         known_scores.append(score['name'])
 
     for action in json_object["data"]["ControlAction"]:
-        if len(action["object"]) > 0:
-            name = action['object'][0]['nodeValue']['name']
-            source = action['object'][0]['nodeValue']['source']
-            potentialActionIdentifier = action['object'][1]['value']
-            name_only = os.path.splitext(name)[0]
-            # print(name_only)
+        if (len(action["object"]) > 0) and (action['actionStatus'] != "FailedActionStatus"):
+            node_nr = 0 if (action['object'][0]['name'] == "Work") else 1
+            node_nr_action = 0 if (node_nr == 1) else 1
+            name = action['object'][node_nr]['nodeValue']['name']
+            source = action['object'][node_nr]['nodeValue']['source']
+            potentialActionIdentifier = "" if (len(action["object"]) < 2) else action['object'][node_nr_action]['value']
+            a = urlparse(source)
+            filename = os.path.basename(a.path)
+            name_only = os.path.splitext(filename)[0]
             # TODO: check if filename is pdf or other allowed format
             if name_only not in known_scores:
                 print(name_only, " not currently known")
                 identifier = store_sheet(source, potentialActionIdentifier)
                 known_scores.append(name_only)
-                message = {'score_name': name, '_id': identifier}
+                message = {'score_name': name_only, '_id': identifier}
                 add_to_queue('omr_planner_queue', 'omr_planner_queue', json.dumps(message))
                 # send message to omr planner that there is a new sheet
 
@@ -136,7 +140,7 @@ def create_controlaction(task_id):
     actionStatus = "PotentialActionStatus"
 
     mycol2 = mydb["sheets"]
-    query2 = {"name": result['name']}
+    query2 = {"name": result['score']}
     mysheet = mycol2.find_one(query2)
     potential_action = mysheet['edit_action']
 
@@ -177,7 +181,7 @@ def create_controlaction_verify(task_id):
     actionStatus = "PotentialActionStatus"
 
     mycol2 = mydb["sheets"]
-    query2 = {"name": result['name']}
+    query2 = {"name": result['score']}
     mysheet = mycol2.find_one(query2)
     potential_action = mysheet['verify_action']
 
@@ -231,7 +235,7 @@ def main():
         begin_time = datetime.now()
         sleep_in_minutes = 1
         while True:
-            # if((datetime.now() - begin_time).total_seconds() > (sleep_in_minutes * 30)):
+            # if((datetime.now() - begin_time).total_seconds() > (sleep_in_minutes * 60)):
             #     print(datetime.now(), "Monitor Upload")
             #     poll_controlactions()
             #     begin_time = datetime.now()

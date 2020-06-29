@@ -66,7 +66,8 @@ def create_task_from_slice(measure_slice, status):
         'slice_id': str(measure_slice['_id']),
         'image_path': measure_slice['score'] + subfolder + measure_slice['name'],
         'status': status,
-        'xml': getXMLofSlice(measure_slice['score'], measure_slice['start'], measure_slice['end'])},
+        'xml': getXMLofSlice(measure_slice['score'], measure_slice['start'], measure_slice['end'])
+        }
     entry = db["tasks"].insert_one(task).inserted_id
 
     pathlib.Path(api_folder + "/static/" + task['score'] + "/slices/measures/").mkdir(parents=True, exist_ok=True)

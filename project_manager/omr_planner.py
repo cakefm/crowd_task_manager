@@ -80,7 +80,7 @@ def main():
                     mycol = db['sheets']
                     myquery = {"name" : score_status['name']}
                     mydoc = mycol.find_one(myquery)
-                    if(mydoc['submitted_mei_path']):
+                    if('submitted_mei_path' in mydoc):
                         if(len(mydoc['submitted_mei_path']) > 0):
                             print(
                                 datetime.now(),
