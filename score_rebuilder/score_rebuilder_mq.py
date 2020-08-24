@@ -3,7 +3,7 @@ import pika
 import json
 
 sys.path.append("..")
-import common.settings as settings
+from common.settings import cfg
 import common.file_system_manager as fsm
 import common.tree_tools as tt
 import xml.dom.minidom as xml
@@ -16,12 +16,12 @@ def callback(ch, method, properties, body):
     sheet_name = data['name']
     task_id = data['task_id']
 
-    client = MongoClient(settings.mongo_address[0], int(settings.mongo_address[1]))
+    client = MongoClient(cfg.mongodb_address.ip, cfg.mongodb_address.port)
     db = client.trompa_test
-    sheet_id = str(db[settings.sheet_collection_name].find_one({"name" : sheet_name})["_id"])
+    sheet_id = str(db[cfg.col_sheet].find_one({"name" : sheet_name})["_id"])
 
     # Obtain aggregated XML
-    aggregated_result = db[settings.aggregated_result_collection_name].find_one({"task_id" : task_id})
+    aggregated_result = db[cfg.col_aggregated_result].find_one({"task_id" : task_id})
     aggregated_xml = xml.parseString("<mei>" + aggregated_result["xml"] + "</mei>")
     aggregated_dict = {x.attributes["n"].value:x for x in aggregated_xml.getElementsByTagName("measure")}
 
@@ -53,11 +53,11 @@ def callback(ch, method, properties, body):
     channel.basic_publish(exchange="", routing_key="omr_planner_status_queue", body=json.dumps(status_update_msg))
 
 
-address = settings.rabbitmq_address
-connection = pika.BlockingConnection(pika.ConnectionParameters(address[0], address[1]))
+address = cfg.rabbitmq_address
+connection = pika.BlockingConnection(pika.ConnectionParameters(address.ip, address.port))
 channel = connection.channel()
-channel.queue_declare(queue=settings.score_rebuilder_queue_name)
-channel.basic_consume(queue=settings.score_rebuilder_queue_name, on_message_callback=callback, auto_ack=True)
+channel.queue_declare(queue=cfg.mq_score_rebuilder)
+channel.basic_consume(queue=cfg.mq_score_rebuilder, on_message_callback=callback, auto_ack=True)
 
 print('Score rebuilder is listening...')
 channel.start_consuming()
