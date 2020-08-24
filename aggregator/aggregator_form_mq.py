@@ -4,7 +4,7 @@ import json
 import numpy as np
 
 sys.path.append("..")
-import common.settings as settings
+from common.settings import cfg
 import common.file_system_manager as fsm
 import xml.dom.minidom as xml
 
@@ -14,10 +14,10 @@ def callback(ch, method, properties, body):
     data = json.loads(body)
     task_id = data['task_id']
 
-    client = MongoClient(settings.mongo_address[0], int(settings.mongo_address[1]))
+    client = MongoClient(cfg.mongodb_address.ip, cfg.mongodb_address.port)
     db = client.trompa_test
 
-    results = db[settings.result_collection_name].find_one({"task_id" : task_id})["results"]
+    results = db[cfg.col_result].find_one({"task_id" : task_id})["results"]
 
     # For now, pretend all the individual results are strings and perform consensus
     results_dict = {}
@@ -37,18 +37,18 @@ def callback(ch, method, properties, body):
     'status': 'complete'
     }
 
-    if count / len(results) < settings.aggregator_form_threshold:
+    if count / len(results) < cfg.aggregator_form_threshold:
         status_update_msg['status'] = 'failed'
     
     global channel
-    channel.queue_declare(queue=settings.task_status_queue_name)
-    channel.basic_publish(exchange="", routing_key=settings.task_status_queue_name, body=json.dumps(status_update_msg))
+    channel.queue_declare(queue=cfg.mq_task_status)
+    channel.basic_publish(exchange="", routing_key=cfg.mq_task_status, body=json.dumps(status_update_msg))
 
-address = settings.rabbitmq_address
-connection = pika.BlockingConnection(pika.ConnectionParameters(address[0], address[1]))
+address = cfg.rabbitmq_address
+connection = pika.BlockingConnection(pika.ConnectionParameters(address.ip, address.port))
 channel = connection.channel()
-channel.queue_declare(queue=settings.aggregator_form_queue_name)
-channel.basic_consume(queue=settings.aggregator_form_queue_name, on_message_callback=callback, auto_ack=True)
+channel.queue_declare(queue=cfg.mq_aggregator_form)
+channel.basic_consume(queue=cfg.mq_aggregator_form, on_message_callback=callback, auto_ack=True)
 
 print('Form aggregator is listening...')
 channel.start_consuming()
