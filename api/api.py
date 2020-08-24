@@ -55,7 +55,7 @@ app.config['UPLOAD_FOLDER'] = str(Path.home() / cfg.upload_folder)
 def index():
     myclient = pymongo.MongoClient(MONGO_SERVER.ip, MONGO_SERVER.port)
     mydb = myclient[MONGO_DB]
-    mycol = mydb['submitted_tasks']
+    mycol = mydb[cfg.col_submitted_task]
     myquery = {}
     mydoc = mycol.find(myquery)
     tasks = []
@@ -68,7 +68,7 @@ def index():
 def get_tasks():
     myclient = pymongo.MongoClient(MONGO_SERVER.ip, MONGO_SERVER.port)
     mydb = myclient[MONGO_DB]
-    mycol = mydb['tasks']
+    mycol = mydb[cfg.col_task]
     myquery = {}
     mydoc = mycol.find(myquery)
     tasks = []
@@ -85,7 +85,7 @@ def get_tasks():
 def get_task_query(variable):
     myclient = pymongo.MongoClient(MONGO_SERVER.ip, MONGO_SERVER.port)
     mydb = myclient[MONGO_DB]
-    mycol = mydb['tasks']
+    mycol = mydb[cfg.col_task]
     myquery = {"_id": ObjectId(variable)}
     mydoc = mycol.find_one(myquery)
     task = {}
@@ -93,7 +93,7 @@ def get_task_query(variable):
     task['image_url'] = CURRENT_SERVER + 'static/' + mydoc['image_path']
     task['mei_snippet'] = mydoc['xml']
 
-    mycol = mydb['task_context']
+    mycol = mydb[cfg.col_task_context]
     myquery = {"task_id": variable}
     mydoc = mycol.find_one(myquery)
     task['preface'] = mydoc['preface']
@@ -154,7 +154,7 @@ def task_xml(variable):
 def taskpost(variable):
     myclient = pymongo.MongoClient(MONGO_SERVER.ip, MONGO_SERVER.port)
     mydb = myclient[MONGO_DB]
-    mycol = mydb["results"]
+    mycol = mydb[cfg.col_result]
     opinion = 'xml' if 'v' not in request.args else (request.args['v'] == "1")
     result_type = "verify" if 'v' in request.args else "edit"
     result = {
@@ -304,7 +304,7 @@ def taskpost(variable):
 def index_sheets():
     myclient = pymongo.MongoClient(MONGO_SERVER.ip, MONGO_SERVER.port)
     mydb = myclient[MONGO_DB]
-    mycol = mydb["results_agg"]
+    mycol = mydb[cfg.col_aggregated_result]
     myquery = {}
     mydoc = mycol.find(myquery)
     sheets = []
@@ -318,7 +318,7 @@ def index_sheets():
 def show_sheet(variable):
     myclient = pymongo.MongoClient(MONGO_SERVER.ip, MONGO_SERVER.port)
     mydb = myclient[MONGO_DB]
-    mycol = mydb["results_agg"]
+    mycol = mydb[cfg.col_aggregated_result]
     myquery = {"_id": ObjectId(variable)}
     mydoc = mycol.find(myquery)
     sheet = mydoc[0]
@@ -332,19 +332,19 @@ def show_sheet(variable):
 def show_page_context(variable):
     myclient = pymongo.MongoClient(MONGO_SERVER.ip, MONGO_SERVER.port)
     mydb = myclient[MONGO_DB]
-    mycol = mydb["task_context"]
+    mycol = mydb[cfg.col_task_context]
     myquery = {"task_id": ObjectId(variable)}
     mydoc = mycol.find_one(myquery)
     page_nr = mydoc['page_nr']
     score = mydoc['score']
     coords = mydoc['coords']
 
-    mycol2 = mydb['sheets']
+    mycol2 = mydb[cfg.col_sheet]
     myquery2 = {"name": score}
     mydoc2 = mycol2.find_one(myquery2)
     nr_pages = len(mydoc2['pages_path'])
 
-    mycol = mydb["task_context"]
+    mycol = mydb[cfg.col_task_context]
     myquery = {"score": score, "page_nr": page_nr}
     mydoc = mycol.find(myquery, {'_id': False, 'task_id': False})
 
@@ -412,7 +412,7 @@ def upload_sheet():
             # create entry into database
             myclient = pymongo.MongoClient(MONGO_SERVER.ip, MONGO_SERVER.port)
             mydb = myclient[MONGO_DB]
-            mycol = mydb["sheets"]
+            mycol = mydb[cfg.col_sheet]
             # copy file to omr_files
             data_folder_temp = Path(UPLOAD_FOLDER_TEMP)
             os.chown(data_folder_temp, uid, gid)
@@ -495,7 +495,7 @@ def download_from_url():
             # create entry into database
             myclient = pymongo.MongoClient(MONGO_SERVER.ip, MONGO_SERVER.port)
             mydb = myclient[MONGO_DB]
-            mycol = mydb["sheets"]
+            mycol = mydb[cfg.col_sheet]
             # copy file to omr_files
             data_folder_temp = Path(UPLOAD_FOLDER_TEMP)
             pathlib.Path(data_folder_temp).mkdir(parents=True, exist_ok=True)
