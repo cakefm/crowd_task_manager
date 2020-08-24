@@ -4,7 +4,7 @@ import numpy as np
 import sys
 sys.path.append("..")
 import common.tree_tools as tt
-import common.settings as settings
+from common.settings import cfg
 
 GAP_ELEMENT_NAME = "gap"
 GAP_PENALTY = 10
@@ -198,7 +198,7 @@ def consensus_best_node_distance(nodes):
     candidates_that_agree = [x for x in node_distance_bins if x > mcd - std and x < mcd + std]
     ratio = len(candidates_that_agree) / len(nodes)
     consensus = False
-    if ratio > settings.aggregator_xml_threshold:
+    if ratio > cfg.aggregator_xml_threshold:
         consensus = True
 
     return nodes[np.argmin(node_distance_bins)], consensus
