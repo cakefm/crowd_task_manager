@@ -36,7 +36,7 @@ import common.file_system_manager as fsm
 import pwd
 import grp
 
-address = cfg.rabbitmq_address
+rabbitmq_address = cfg.rabbitmq_address
 path = os.getcwd()
 UPLOAD_FOLDER_TEMP = path + '/uploads'
 ALLOWED_EXTENSIONS = {'txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif'}
@@ -362,8 +362,8 @@ def allowed_file(filename):
 def send_message(queue_name, routing_key, message):
     connection = pika.BlockingConnection(
         pika.ConnectionParameters(
-            host=address[0],
-            port=address[1]))
+            host=rabbitmq_address.ip,
+            port=rabbitmq_address.port))
     channel = connection.channel()
     channel.queue_declare(queue=queue_name)
     channel.basic_publish(exchange='', routing_key=routing_key, body=message)
