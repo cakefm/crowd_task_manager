@@ -23,7 +23,7 @@ def callback(ch, method, properties, body):
     partial_file_names = data['partials']
 
     # Get sheet id (for status queue)
-    client = MongoClient(cfg.mongo_address.ip, int(cfg.mongo_address.port))
+    client = MongoClient(cfg.mongodb_address.ip, int(cfg.mongodb_address.port))
     db = client[cfg.db_name]
     sheet_id = str(db[cfg.col_sheet].find_one({"name" : sheet_name})["_id"])
 
