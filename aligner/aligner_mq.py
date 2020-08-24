@@ -4,7 +4,7 @@ import json
 import numpy as np
 
 sys.path.append("..")
-import common.settings as settings
+from common.settings import cfg
 import common.file_system_manager as fsm
 import common.tree_alignment as ta
 import common.tree_tools as tt
@@ -23,9 +23,9 @@ def callback(ch, method, properties, body):
     partial_file_names = data['partials']
 
     # Get sheet id (for status queue)
-    client = MongoClient(settings.mongo_address[0], int(settings.mongo_address[1]))
+    client = MongoClient(cfg.mongo_address.ip, int(cfg.mongo_address.port))
     db = client.trompa_test
-    sheet_id = str(db[settings.sheet_collection_name].find_one({"name" : sheet_name})["_id"])
+    sheet_id = str(db[cfg.col_sheet].find_one({"name" : sheet_name})["_id"])
 
     whole_dir = fsm.get_sheet_whole_directory(sheet_name)
     skeleton_path = whole_dir / 'aligned.mei'
@@ -64,15 +64,15 @@ def callback(ch, method, properties, body):
     }
 
     global channel
-    channel.queue_declare(queue=settings.omr_planner_status_queue_name)
-    channel.basic_publish(exchange="", routing_key=settings.omr_planner_status_queue_name, body=json.dumps(status_update_msg))
+    channel.queue_declare(queue=cfg.mq_omr_planner_status)
+    channel.basic_publish(exchange="", routing_key=cfg.mq_omr_planner_status, body=json.dumps(status_update_msg))
 
-address = settings.rabbitmq_address
-connection = pika.BlockingConnection(pika.ConnectionParameters(address[0], address[1]))
+address = cfg.rabbitmq_address
+connection = pika.BlockingConnection(pika.ConnectionParameters(address.ip, address.port))
 channel = connection.channel()
 
-channel.queue_declare(queue=settings.aligner_queue_name)
-channel.basic_consume(queue=settings.aligner_queue_name, on_message_callback=callback, auto_ack=True)
+channel.queue_declare(queue=cfg.mq_aligner)
+channel.basic_consume(queue=cfg.mq_aligner, on_message_callback=callback, auto_ack=True)
 
 print('XML aligner is listening...')
 channel.start_consuming()
