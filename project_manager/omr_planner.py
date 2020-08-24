@@ -4,26 +4,22 @@ from datetime import datetime
 import json
 import sys
 sys.path.append("..")
-import common.settings as settings
+from common.settings import cfg
 import common.file_system_manager as fsm
 
 from pymongo import MongoClient
 from bson.objectid import ObjectId
 
-with open("../settings.yaml", "r") as file:
-    config = yaml.safe_load(file.read())
-
-rabbitmq_address = config['rabbitmq_address']
-address = rabbitmq_address.split(":")
-client = MongoClient(settings.mongo_address[0], int(settings.mongo_address[1]))
-db = client.trompa_test
+rabbitmq_address = cfg.rabbitmq_address
+client = MongoClient(cfg.mongo_address.ip, cfg.mongo_address.port)
+db = client[cfg.db_name]
 
 
 def read_message(queue_name):
     connection = pika.BlockingConnection(
         pika.ConnectionParameters(
-            host=address[0],
-            port=address[1]))
+            host=rabbitmq_address.ip,
+            port=rabbitmq_address.port))
     channel = connection.channel()
     msg = ''
     method_frame, header_frame, body = channel.basic_get(queue_name)
@@ -38,8 +34,8 @@ def read_message(queue_name):
 def send_message(queue_name, routing_key, message):
     connection = pika.BlockingConnection(
         pika.ConnectionParameters(
-            host=address[0],
-            port=address[1]))
+            host=rabbitmq_address.ip,
+            port=rabbitmq_address.port))
     channel = connection.channel()
     channel.queue_declare(queue=queue_name)
     channel.basic_publish(exchange='', routing_key=routing_key, body=message)
@@ -51,18 +47,11 @@ def check_for_omr_project(queue_name):
     return message
 
 
-def call_module(module_name, score_name, score_id):
-    queue_name = module_name + '_queue'
-    routing_key = queue_name
-    message = {'score_name': score_name, '_id': score_id}
-    send_message(queue_name, routing_key, json.dumps(message))
-
-
 def main():
     try:
         print(datetime.now(), 'omr_planner started!')
         while True:
-            score = read_message('omr_planner_queue')
+            score = read_message(cfg.mq_omr_planner)
             if len(score) > 0:
                 print(
                     datetime.now(),
@@ -70,14 +59,13 @@ def main():
                     score['score_name'],
                     'sending to measure_detector')
                 if score['_id'] is not None:
-                    call_module(
-                        'measure_detector',
-                        score['score_name'],
-                        score['_id'])
-            score_status = read_message('omr_planner_status_queue')
+                    message = {'score_name': score['score_name'], '_id': score['_id']}
+                    send_message(cfg.mq_new_item, cfg.mq_new_item, json.dumps(message))
+
+            score_status = read_message(cfg.mq_omr_planner_status)
             if len(score_status) > 0:
                 if score_status['module'] == 'measure_detector':
-                    mycol = db['sheets']
+                    mycol = db[cfg.col_sheet]
                     myquery = {"name" : score_status['name']}
                     mydoc = mycol.find_one(myquery)
                     if('submitted_mei_path' in mydoc):
@@ -87,8 +75,8 @@ def main():
                                 'sending ',
                                 score_status['name'], 'to aligner')
                             send_message(
-                                'aligner_queue',
-                                'aligner_queue',
+                                cfg.mq_aligner,
+                                cfg.mq_aligner,
                                 json.dumps({
                                     '_id': score_status['_id'],
                                     'partials': [mydoc['submitted_mei_path']],
@@ -100,8 +88,8 @@ def main():
                             'sending ',
                             score_status['name'], 'to slicer')
                         send_message(
-                            'slicer_queue',
-                            'slicer_queue',
+                            cfg.mq_slicer,
+                            cfg.mq_slicer,
                             json.dumps({
                                 '_id': score_status['_id'],
                                 'name': score_status['name']}))
@@ -110,8 +98,8 @@ def main():
                             'sending ',
                             score_status['name'], 'to github_init')
                         send_message(
-                            'github_init_queue',
-                            'github_init_queue',
+                            cfg.mq_github_init,
+                            cfg.mq_github_init,
                             json.dumps({
                                 '_id': score_status['_id'],
                                 'name': score_status['name']}))
@@ -122,8 +110,8 @@ def main():
                         'sending ',
                         score_status['name'], 'to slicer')
                     send_message(
-                        'slicer_queue',
-                        'slicer_queue',
+                        cfg.mq_slicer,
+                        cfg.mq_slicer,
                         json.dumps({
                             '_id': score_status['_id'],
                             'name': score_status['name']}))
@@ -132,8 +120,8 @@ def main():
                         'sending ',
                         score_status['name'], 'to github_init')
                     send_message(
-                        'github_init_queue',
-                        'github_init_queue',
+                        cfg.mq_github_init,
+                        cfg.mq_github_init,
                         json.dumps({
                             '_id': score_status['_id'],
                             'name': score_status['name']}))
@@ -144,8 +132,8 @@ def main():
                         'sending ',
                         score_status['name'], 'task_scheduler')
                     send_message(
-                        'task_scheduler_queue',
-                        'task_scheduler_queue',
+                        cfg.mq_task_scheduler,
+                        cfg.mq_task_scheduler,
                         json.dumps({
                             '_id': score_status['_id'],
                             'name': score_status['name'],
@@ -158,8 +146,8 @@ def main():
                         'sending ',
                         score_status['name'], 'to score_rebuilder')
                     send_message(
-                        'score_rebuilder_queue',
-                        'score_rebuilder_queue',
+                        cfg.mq_score_rebuilder,
+                        cfg.mq_score_rebuilder,
                         json.dumps({
                             'task_id': score_status['_id'],
                             'name': score_status['name']}))
@@ -188,8 +176,8 @@ def main():
                         'sending ',
                         score_status['name'], 'to github_update')
                     send_message(
-                        'github_queue',
-                        'github_queue',
+                        cfg.mq_github,
+                        cfg.mq_github,
                         json.dumps({
                             'task_id': score_status['task_id'],
                             'name': score_status['name']}))
