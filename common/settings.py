@@ -23,7 +23,7 @@ class Cfg(object):
         self._type_dict = {
             "int": int,
             "float": float,
-            "ip": lambda x: IP_address(*x.split(":")),
+            "ip": lambda x: IP_address(*map(lambda y,z: y(z), [str, int], x.split(":"))),
             "path" : Path
         }
 
