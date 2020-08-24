@@ -1,42 +1,60 @@
+# This config has some optional fancy parsing options, that can be added after a '|' separator in the config entry name.
+#
+# The first option explicitly indicates the type of the entry (the default is str). 
+# So far the following are supported:
+# - int     (value will be read as int)
+# - float   (value will be read as float)
+# - ip      (value will be converted to namedtuple with str "ip" and int "port" fields, format is "ip:port", e.g. "192.168.0.1:5000")
+# - path    (value will be converted to a pathlib Path object)
+#
+# The second option indicates the range, which currently only works for numerical types (float/int).
+# The two values are separate by "...", with the left one being the lower limit and the right one being the upper.
+
 # Mongo DB
-mongo_server: "" # mongodb://<ip>:<port>/
-mongo_db: "trompa_test"
-mongo_slice_collection: "slices"
-mongo_score_collection: "scores"
-mongo_sheet_collection: "sheets"
-mongo_aggregated_result_collection: "results_agg"
-mongo_result_collection: "results"
-mongo_task_collection: "tasks"
+mongodb_address|ip: "" # "ip:port"
+db_name: "trompa_test"
+col_slice: "slices"
+col_score: "scores"
+col_sheet: "sheets"
+col_aggregated_result: "results_agg"
+col_result: "results"
+col_task: "tasks"
+col_task_context: "task_context"
+col_submitted_task: "submitted_tasks"
 
 # Rabbit MQ
-rabbitmq_address: "" # "<ip>:<port>"
-mq_new_item_queue: "measure_detector_queue"
-mq_sheet_queue: "sheet_queue"
-mq_score_queue: "score_queue"
-mq_score_rebuilder_queue: "score_rebuilder_queue"
-mq_aligner_queue: "aligner_queue"
-mq_aggregator_queue: "aggregator_queue"
-mq_github_init_queue: "github_init_queue"
-mq_github_queue: "github_queue"
-mq_aggregator_xml_queue: "aggregator_xml_queue"
-mq_aggregator_form_queue: "aggregator_form_queue"
-mq_omr_planner_status_queue: "omr_planner_status_queue"
-mq_task_status_queue: "task_status_queue"
+rabbitmq_address|ip: "" # "ip:port"
+mq_new_item: "measure_detector_queue"
+mq_sheet: "sheet_queue"
+mq_score: "score_queue"
+mq_score_rebuilder: "score_rebuilder_queue"
+mq_aggregator: "aggregator_queue"
+mq_github_init: "github_init_queue"
+mq_github: "github_queue"
+mq_aggregator_xml: "aggregator_xml_queue"
+mq_aggregator_form: "aggregator_form_queue"
+mq_omr_planner: "omr_planner_queue"
+mq_omr_planner_status: "omr_planner_status_queue"
+mq_task_status: "task_status_queue"
+mq_task_scheduler: "task_scheduler_queue"
+mq_task_scheduler_status: "task_scheduler_status_queue"
+mq_ce_communicator: "ce_communicator_queue"
+mq_aligner: "aligner_queue"
 
 # Paths
-upload_folder: "/omr_files/"
-base_sheet_path: "/home/ubuntu/omr_files"
+upload_folder|path: "/omr_files/"
+base_sheet_path|path: "/home/ubuntu/omr_files"
 
 # Github
 github_user: ""
 github_token: ""
 github_organization: ""
 github_branch: ""
-github_commit_count_before_push: 5
+github_commit_count_before_push|int: 5
 
 # Aggregator
-aggregator_xml_threshold: 0.6
-aggregator_form_threshold: 0.6
+aggregator_xml_threshold|float|0...1: 0.6
+aggregator_form_threshold|float|0...1: 0.6
 
 # Other
 ce_server: "https://api-test.trompamusic.eu/"
