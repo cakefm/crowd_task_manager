@@ -42,7 +42,7 @@ def callback(ch, method, properties, body):
     client = MongoClient(
         cfg.mongodb_address.ip,
         cfg.mongodb_address.port)
-    db = client.trompa_test
+    db = client[cfg.db_name]
     sheet_collection = db[cfg.col_sheet]
 
     # Get PDF sheet entry

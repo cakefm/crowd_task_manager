@@ -22,7 +22,7 @@ def callback(ch, method, properties, body):
 
     # Get sheet id
     client = MongoClient(cfg.mongodb_address.ip, cfg.mongodb_address.port)
-    db = client.trompa_test
+    db = client[cfg.db_name]
     sheet_id = str(db[cfg.col_sheet].find_one({"name" : sheet_name})["_id"])
 
     # Get task name

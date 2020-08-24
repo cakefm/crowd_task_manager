@@ -65,7 +65,7 @@ if args.line != None and args.line >= 0 and args.line < score.get_line_count():
 if args.store_in_db:
     address = cfg.mongodb_address
     client = MongoClient(address.ip, address.port)
-    db = client.trompa_test
+    db = client[cfg.db_name]
 
     res = db[cfg.col_score].insert_one(score.to_db_dict())
     print(f"added entry {res.inserted_id} to scores collection")

@@ -24,7 +24,7 @@ def callback(ch, method, properties, body):
 
     # Get sheet id (for status queue)
     client = MongoClient(cfg.mongo_address.ip, int(cfg.mongo_address.port))
-    db = client.trompa_test
+    db = client[cfg.db_name]
     sheet_id = str(db[cfg.col_sheet].find_one({"name" : sheet_name})["_id"])
 
     whole_dir = fsm.get_sheet_whole_directory(sheet_name)

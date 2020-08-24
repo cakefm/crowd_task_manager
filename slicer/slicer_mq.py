@@ -38,7 +38,7 @@ def callback(ch, method, properties, body):
     }
 
     client = MongoClient(cfg.mongodb_address.ip, cfg.mongodb_address.port)
-    db = client.trompa_test
+    db = client[cfg.db_name]
 
     for slice_path, slice_list in slice_paths_lists.items():
         pathlib.Path(slice_path).mkdir(parents=True, exist_ok=True)

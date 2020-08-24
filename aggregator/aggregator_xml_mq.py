@@ -17,7 +17,7 @@ def callback(ch, method, properties, body):
     task_id = data['task_id']
 
     client = MongoClient(cfg.mongodb_address.ip, int(mongodb_address.port))
-    db = client.trompa_test
+    db = client[cfg.db_name]
 
     results = []
 
@@ -46,7 +46,7 @@ def callback(ch, method, properties, body):
         status_update_msg['status'] = 'failed'
     else:
         # store aggregated result in db
-        results_agg_coll = db['results_agg']
+        results_agg_coll = db[cfg.col_aggregated_result]
         result_agg = {
             'task_id': task_id,
             'xml': str(final_tree.toprettyxml())
