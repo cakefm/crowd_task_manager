@@ -70,7 +70,7 @@ def store_sheet(source, potentialActionIdentifier):
         print("url retrieve end")
 
         # create entry into database
-        myclient = pymongo.MongoClient(MONGO_SERVER)
+        myclient = pymongo.MongoClient(MONGO_SERVER.ip, MONGO_SERVER.port)
         mydb = myclient[MONGO_DB]
         mycol = mydb[cfg.col_sheet]
 
@@ -96,7 +96,7 @@ def poll_controlactions():
     # print(response.text)
     json_object = json.loads(response.text)
     # check of there are any new controlactions
-    myclient = pymongo.MongoClient(MONGO_SERVER)
+    myclient = pymongo.MongoClient(MONGO_SERVER.ip, MONGO_SERVER.port)
     mydb = myclient[MONGO_DB]
     mycol = mydb[cfg.col_sheet]
     myquery = {}
@@ -128,7 +128,7 @@ def poll_controlactions():
 
 def create_controlaction(task_id):
     # query task data from db
-    myclient = pymongo.MongoClient(MONGO_ADDRESS.ip, MONGO_ADDRESS.port)
+    myclient = pymongo.MongoClient(MONGO_SERVER.ip, MONGO_SERVER.port)
     mydb = myclient[MONGO_DB]
     mycol = mydb[cfg.col_task]
     query = {'_id': ObjectId(task_id)}
@@ -169,7 +169,7 @@ def create_controlaction(task_id):
 
 def create_controlaction_verify(task_id):
     # query task data from db
-    myclient = pymongo.MongoClient(MONGO_SERVER)
+    myclient = pymongo.MongoClient(MONGO_SERVER.ip, MONGO_SERVER.port)
     mydb = myclient[MONGO_DB]
     mycol = mydb[cfg.col_task]
     query = {'_id': ObjectId(task_id)}
@@ -215,7 +215,7 @@ def update_control_action_status(identifier, action_status, task_type):
     # FailedActionStatus,
     # PotentialActionStatus
 
-    myclient = pymongo.MongoClient(MONGO_SERVER)
+    myclient = pymongo.MongoClient(MONGO_SERVER.ip, MONGO_SERVER.port)
     mydb = myclient[MONGO_DB]
     mycol = mydb[cfg.col_submitted_task]
 

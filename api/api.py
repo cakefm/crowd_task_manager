@@ -40,7 +40,7 @@ address = cfg.rabbitmq_address
 path = os.getcwd()
 UPLOAD_FOLDER_TEMP = path + '/uploads'
 ALLOWED_EXTENSIONS = {'txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif'}
-MONGO_ADDRESS = cfg.mongodb_address
+MONGO_SERVER = cfg.mongodb_address
 MONGO_DB = cfg.db_name
 TASK_COLL = cfg.col_task
 # CLIENT_SECRET = cfg.client_secret
@@ -53,7 +53,7 @@ app.config['UPLOAD_FOLDER'] = str(Path.home() / cfg.upload_folder)
 # display all the tasks
 @app.route('/index')
 def index():
-    myclient = pymongo.MongoClient(MONGO_ADDRESS.ip, MONGO_ADDRESS.port)
+    myclient = pymongo.MongoClient(MONGO_SERVER.ip, MONGO_SERVER.port)
     mydb = myclient[MONGO_DB]
     mycol = mydb['submitted_tasks']
     myquery = {}
@@ -66,7 +66,7 @@ def index():
 
 @app.route('/tasks', methods=['GET'])
 def get_tasks():
-    myclient = pymongo.MongoClient(MONGO_SERVER)
+    myclient = pymongo.MongoClient(MONGO_SERVER.ip, MONGO_SERVER.port)
     mydb = myclient[MONGO_DB]
     mycol = mydb['tasks']
     myquery = {}
@@ -83,7 +83,7 @@ def get_tasks():
 
 @app.route('/tasks/<variable>', methods=['GET'])
 def get_task_query(variable):
-    myclient = pymongo.MongoClient(MONGO_SERVER)
+    myclient = pymongo.MongoClient(MONGO_SERVER.ip, MONGO_SERVER.port)
     mydb = myclient[MONGO_DB]
     mycol = mydb['tasks']
     myquery = {"_id": ObjectId(variable)}
@@ -106,7 +106,7 @@ def get_task_query(variable):
 # display task info, slice, and xml
 @app.route('/edit/<variable>', methods=['GET'])
 def task(variable):
-    myclient = pymongo.MongoClient(MONGO_SERVER)
+    myclient = pymongo.MongoClient(MONGO_SERVER.ip, MONGO_SERVER.port)
     mydb = myclient[MONGO_DB]
     mycol = mydb[TASK_COLL]
     myquery = {"_id": ObjectId(variable)}
@@ -121,7 +121,7 @@ def task(variable):
 # display task info, slice, and xml
 @app.route('/verify/<variable>', methods=['GET'])
 def task_verify(variable):
-    myclient = pymongo.MongoClient(MONGO_SERVER)
+    myclient = pymongo.MongoClient(MONGO_SERVER.ip, MONGO_SERVER.port)
     mydb = myclient[MONGO_DB]
     mycol = mydb[TASK_COLL]
     myquery = {"_id": ObjectId(variable)}
@@ -136,7 +136,7 @@ def task_verify(variable):
 # getxml data
 @app.route('/xml/<variable>', methods=['GET'])
 def task_xml(variable):
-    myclient = pymongo.MongoClient(MONGO_SERVER)
+    myclient = pymongo.MongoClient(MONGO_SERVER.ip, MONGO_SERVER.port)
     mydb = myclient[MONGO_DB]
     mycol = mydb[TASK_COLL]
     myquery = {"_id": ObjectId(variable)}
@@ -152,7 +152,7 @@ def task_xml(variable):
 # receive xml data
 @app.route('/<variable>', methods=['POST'])
 def taskpost(variable):
-    myclient = pymongo.MongoClient(MONGO_SERVER)
+    myclient = pymongo.MongoClient(MONGO_SERVER.ip, MONGO_SERVER.port)
     mydb = myclient[MONGO_DB]
     mycol = mydb["results"]
     opinion = 'xml' if 'v' not in request.args else (request.args['v'] == "1")
@@ -302,7 +302,7 @@ def taskpost(variable):
 # display list of completed sheets
 @app.route('/results', methods=['GET'])
 def index_sheets():
-    myclient = pymongo.MongoClient(MONGO_SERVER)
+    myclient = pymongo.MongoClient(MONGO_SERVER.ip, MONGO_SERVER.port)
     mydb = myclient[MONGO_DB]
     mycol = mydb["results_agg"]
     myquery = {}
@@ -316,7 +316,7 @@ def index_sheets():
 # display aggregated task results
 @app.route('/results/<variable>', methods=['GET'])
 def show_sheet(variable):
-    myclient = pymongo.MongoClient(MONGO_SERVER)
+    myclient = pymongo.MongoClient(MONGO_SERVER.ip, MONGO_SERVER.port)
     mydb = myclient[MONGO_DB]
     mycol = mydb["results_agg"]
     myquery = {"_id": ObjectId(variable)}
@@ -330,7 +330,7 @@ def show_sheet(variable):
 # display aggregated task results
 @app.route('/context/<variable>', methods=['GET'])
 def show_page_context(variable):
-    myclient = pymongo.MongoClient(MONGO_SERVER)
+    myclient = pymongo.MongoClient(MONGO_SERVER.ip, MONGO_SERVER.port)
     mydb = myclient[MONGO_DB]
     mycol = mydb["task_context"]
     myquery = {"task_id": ObjectId(variable)}
@@ -410,7 +410,7 @@ def upload_sheet():
                 os.chown(mei_path, uid, gid)
 
             # create entry into database
-            myclient = pymongo.MongoClient(MONGO_SERVER)
+            myclient = pymongo.MongoClient(MONGO_SERVER.ip, MONGO_SERVER.port)
             mydb = myclient[MONGO_DB]
             mycol = mydb["sheets"]
             # copy file to omr_files
@@ -493,7 +493,7 @@ def download_from_url():
             os.chown(sheet_path, uid, gid)
 
             # create entry into database
-            myclient = pymongo.MongoClient(MONGO_SERVER)
+            myclient = pymongo.MongoClient(MONGO_SERVER.ip, MONGO_SERVER.port)
             mydb = myclient[MONGO_DB]
             mycol = mydb["sheets"]
             # copy file to omr_files
@@ -541,7 +541,7 @@ def download_from_url():
 
 @app.route('/tasks', methods=['GET'])
 def list_tasks():
-    myclient = pymongo.MongoClient(MONGO_SERVER)
+    myclient = pymongo.MongoClient(MONGO_SERVER.ip, MONGO_SERVER.port)
     mydb = myclient[MONGO_DB]
     mycol = mydb['tasks_test2']
     myquery = {}
@@ -563,7 +563,7 @@ def list_tasks():
 
 @app.route('/tasks/<variable>', methods=['GET'])
 def get_task(variable):
-    myclient = pymongo.MongoClient(MONGO_SERVER)
+    myclient = pymongo.MongoClient(MONGO_SERVER.ip, MONGO_SERVER.port)
     mydb = myclient[MONGO_DB]
     mycol = mydb['tasks_test2']
     myquery = {"_id": ObjectId(variable)}
