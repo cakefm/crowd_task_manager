@@ -11,7 +11,7 @@ from pymongo import MongoClient
 from bson.objectid import ObjectId
 
 rabbitmq_address = cfg.rabbitmq_address
-client = MongoClient(cfg.mongo_address.ip, cfg.mongo_address.port)
+client = MongoClient(cfg.mongodb_address.ip, cfg.mongodb_address.port)
 db = client[cfg.db_name]
 
 
