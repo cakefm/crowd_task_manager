@@ -5,17 +5,17 @@ import json
 import sys
 
 sys.path.append("..")
-import common.settings as settings
+from common.settings import cfg
 import common.file_system_manager as fsm
 
 from slicer import Score, Slice
 from pymongo import MongoClient
 
 
-address = settings.rabbitmq_address
-connection = pika.BlockingConnection(pika.ConnectionParameters(address[0], address[1]))
+address = cfg.rabbitmq_address
+connection = pika.BlockingConnection(pika.ConnectionParameters(address.ip, address.port))
 channel = connection.channel()
-channel.queue_declare(queue=settings.sheet_queue_name)
+channel.queue_declare(queue=cfg.mq_sheet)
 
 def callback(ch, method, properties, body):
     data = json.loads(body)
@@ -37,7 +37,7 @@ def callback(ch, method, properties, body):
         line_path               : score.get_line_slices()
     }
 
-    client = MongoClient(settings.mongo_address[0], int(settings.mongo_address[1]))
+    client = MongoClient(cfg.mongodb_address.ip, cfg.mongodb_address.port)
     db = client.trompa_test
 
     for slice_path, slice_list in slice_paths_lists.items():
@@ -45,12 +45,12 @@ def callback(ch, method, properties, body):
         for score_slice in slice_list:
             if score_slice.same_page:
                 score_slice.get_image().save(str(slice_path / score_slice.get_name()))
-                slice_res = db[settings.slice_collection_name].insert_one(score_slice.to_db_dict())
+                slice_res = db[cfg.col_slice].insert_one(score_slice.to_db_dict())
                 print(f"added entry {slice_res.inserted_id} to slices collection")
 
-    channel.queue_declare(queue = settings.score_queue_name)
+    channel.queue_declare(queue = cfg.mq_score)
 
-    score_res = db[settings.score_collection_name].insert_one(score.to_db_dict())
+    score_res = db[cfg.col_score].insert_one(score.to_db_dict())
     print(f"added entry {score_res.inserted_id} to scores collection")
 
     status_update_msg = {
