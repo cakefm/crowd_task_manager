@@ -10,6 +10,7 @@ Contains the required settings for the python scripts from the yaml along with s
 # Some flags for debugging and convenience
 DYNAMIC_REFRESH = False
 CHECK_IF_CONFIG_PARSES = True
+IGNORE_RANGES = False
 SEPARATOR = "|"
 CFG_PATH = "../settings.yaml"
 
@@ -47,7 +48,7 @@ class Cfg(object):
             value_type = self._type_dict[split[1]]
             value = value_type(value)
 
-            if len(split) > 2:
+            if len(split) > 2 and not IGNORE_RANGES:
                 value_range = tuple(map(value_type, split[2].split("...")))
                 value = max(value_range[0], min(value, value_range[1]))
         return value
