@@ -31,33 +31,29 @@ import pika
 import sys
 import json
 sys.path.append("..")
-import common.settings as settings
+from common.settings import cfg
 import common.file_system_manager as fsm
 import pwd
 import grp
 
-with open("../settings.yaml", 'r') as ymlfile:
-    cfg = yaml.safe_load(ymlfile)
-
-rabbitmq_address = cfg['rabbitmq_address']
-address = rabbitmq_address.split(":")
+address = cfg.rabbitmq_address
 path = os.getcwd()
 UPLOAD_FOLDER_TEMP = path + '/uploads'
 ALLOWED_EXTENSIONS = {'txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif'}
-MONGO_SERVER = cfg['mongo_server']
-MONGO_DB = cfg['mongo_db']
-TASK_COLL = cfg['mongo_task_collection']
-# CLIENT_SECRET = cfg['client_secret']
-CURRENT_SERVER = cfg['current_server']
+MONGO_ADDRESS = cfg.mongodb_address
+MONGO_DB = cfg.db_name
+TASK_COLL = cfg.col_task
+# CLIENT_SECRET = cfg.client_secret
+CURRENT_SERVER = cfg.current_server
 
-app.config['UPLOAD_FOLDER'] = str(Path.home()) + cfg['upload_folder']
+app.config['UPLOAD_FOLDER'] = str(Path.home() / cfg.upload_folder)
 
 
 @app.route('/')
 # display all the tasks
 @app.route('/index')
 def index():
-    myclient = pymongo.MongoClient(MONGO_SERVER)
+    myclient = pymongo.MongoClient(MONGO_ADDRESS.ip, MONGO_ADDRESS.port)
     mydb = myclient[MONGO_DB]
     mycol = mydb['submitted_tasks']
     myquery = {}
