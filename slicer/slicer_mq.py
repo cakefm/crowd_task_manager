@@ -15,7 +15,7 @@ from pymongo import MongoClient
 address = cfg.rabbitmq_address
 connection = pika.BlockingConnection(pika.ConnectionParameters(address.ip, address.port))
 channel = connection.channel()
-channel.queue_declare(queue=cfg.mq_sheet)
+channel.queue_declare(queue=cfg.mq_slicer)
 
 def callback(ch, method, properties, body):
     data = json.loads(body)
@@ -48,7 +48,7 @@ def callback(ch, method, properties, body):
                 slice_res = db[cfg.col_slice].insert_one(score_slice.to_db_dict())
                 print(f"added entry {slice_res.inserted_id} to slices collection")
 
-    channel.queue_declare(queue = cfg.mq_score)
+    channel.queue_declare(queue = cfg.mq_omr_planner_status)
 
     score_res = db[cfg.col_score].insert_one(score.to_db_dict())
     print(f"added entry {score_res.inserted_id} to scores collection")
@@ -60,11 +60,11 @@ def callback(ch, method, properties, body):
         'name': name}
 
     channel.basic_publish(exchange='',
-        routing_key='omr_planner_status_queue',
+        routing_key=cfg.mq_omr_planner_status,
         body=json.dumps(status_update_msg))
     print(f"Published processed score {score.name} to message queue!")
 
-channel.basic_consume(queue='slicer_queue', on_message_callback=callback, auto_ack=True)
+channel.basic_consume(queue=cfg.mq_slicer, on_message_callback=callback, auto_ack=True)
 
 print('Score slicer is listening...')
 channel.start_consuming()
