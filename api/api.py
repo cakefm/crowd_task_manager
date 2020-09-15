@@ -432,8 +432,8 @@ def upload_sheet():
             # send message to omr_planner
             message = {'score_name': os.path.splitext(filename)[0], '_id': str(identifier)}
             send_message(
-                'omr_planner_queue',
-                'omr_planner_queue',
+                cfg.mq_omr_planner,
+                cfg.mq_omr_planner,
                 json.dumps(message))
 
             return '''
@@ -517,8 +517,8 @@ def download_from_url():
             # send message to omr_planner
             message = {'score_name': os.path.splitext(filename)[0], '_id': str(identifier)}
             send_message(
-                'omr_planner_queue',
-                'omr_planner_queue',
+                cfg.mq_omr_planner,
+                cfg.mq_omr_planner,
                 json.dumps(message))
 
             return redirect(url_for('uploaded_file', filename=sheet_path_temp))
