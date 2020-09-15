@@ -70,8 +70,8 @@ def callback(ch, method, properties, body):
     }
 
     global channel
-    channel.queue_declare(queue="status_queue")
-    channel.basic_publish(exchange="", routing_key="status_queue", body=json.dumps(status_update_msg))
+    channel.queue_declare(queue=cfg.mq_omr_planner_status)
+    channel.basic_publish(exchange="", routing_key=cfg.mq_omr_planner_status, body=json.dumps(status_update_msg))
 
 
 address = cfg.rabbitmq_address

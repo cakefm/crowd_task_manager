@@ -71,8 +71,8 @@ def callback(ch, method, properties, body):
     }
 
     global channel
-    channel.queue_declare(queue="omr_planner_status_queue")
-    channel.basic_publish(exchange="", routing_key="omr_planner_status_queue", body=json.dumps(status_update_msg))
+    channel.queue_declare(queue=cfg.mq_omr_planner_status)
+    channel.basic_publish(exchange="", routing_key=cfg.mq_omr_planner_status, body=json.dumps(status_update_msg))
 
 
 commit_counter = 0
