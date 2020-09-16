@@ -20,13 +20,13 @@ def callback(ch, method, properties, body):
     sheet_name = data['name']
 
     # Get sheet id
-    client = MongoClient(settings.mongo_address[0], int(settings.mongo_address[1]))
-    db = client.trompa_test
-    sheet_id = str(db[settings.sheet_collection_name].find_one({"name" : sheet_name})["_id"])
+    client = MongoClient(cfg.mongodb_address.ip, cfg.mongodb_address.port)
+    db = client[cfg.db_name]
+    sheet_id = str(db[cfg.col_sheet].find_one({"name" : sheet_name})["_id"])
 
     # Github
-    github = Github(settings.github_token)
-    org = github.get_organization(settings.github_organization_name)
+    github = Github(cfg.github_token)
+    org = github.get_organization(cfg.github_organization_name)
     repo = org.create_repo(sheet_name, description=f"Repository for {sheet_name}", auto_init=True)
 
     # Git
@@ -41,19 +41,19 @@ def callback(ch, method, properties, body):
     push(clone)
 
     # Add the MEI
-    clone.create_branch(settings.github_branch_name, clone.head.peel())
-    branch = clone.lookup_branch(settings.github_branch_name)
+    clone.create_branch(cfg.github_branch_name, clone.head.peel())
+    branch = clone.lookup_branch(cfg.github_branch_name)
     ref = clone.lookup_reference(branch.name)
     clone.checkout(ref)
 
     mei_path = fsm.get_sheet_whole_directory(sheet_name) / "aligned.mei"
     shutil.copy(str(mei_path), str(fsm.get_sheet_git_directory(sheet_name)))
-    commit(clone, "Initialize crowd manager branch", branch=settings.github_branch_name)
-    push(clone, branch=settings.github_branch_name)
+    commit(clone, "Initialize crowd manager branch", branch=cfg.github_branch_name)
+    push(clone, branch=cfg.github_branch_name)
 
     # Protect the newly created/pushed branch and the master branch on Github
-    repo.get_branch("master").edit_protection(user_push_restrictions=[settings.github_user])
-    repo.get_branch(settings.github_branch_name).edit_protection(user_push_restrictions=[settings.github_user])
+    repo.get_branch("master").edit_protection(user_push_restrictions=[cfg.github_user])
+    repo.get_branch(cfg.github_branch_name).edit_protection(user_push_restrictions=[cfg.github_user])
     
     # Clean up (needed since pygit2 tends to leave files in .git open)
     del clone
@@ -70,14 +70,14 @@ def callback(ch, method, properties, body):
     }
 
     global channel
-    channel.queue_declare(queue="status_queue")
-    channel.basic_publish(exchange="", routing_key="status_queue", body=json.dumps(status_update_msg))
+    channel.queue_declare(queue=cfg.mq_omr_planner_status)
+    channel.basic_publish(exchange="", routing_key=cfg.mq_omr_planner_status, body=json.dumps(status_update_msg))
 
 
-address = settings.rabbitmq_address
-connection = pika.BlockingConnection(pika.ConnectionParameters(address[0], address[1]))
+address = cfg.rabbitmq_address
+connection = pika.BlockingConnection(pika.ConnectionParameters(address.ip, address.port))
 channel = connection.channel()
-channel.queue_declare(queue=settings.github_init_queue_name)
-channel.basic_consume(queue=settings.github_init_queue_name, on_message_callback=callback, auto_ack=True)
+channel.queue_declare(queue=cfg.mq_github_init)
+channel.basic_consume(queue=cfg.mq_github_init, on_message_callback=callback, auto_ack=True)
 print('Github repository intialization module is listening...')
 channel.start_consuming()

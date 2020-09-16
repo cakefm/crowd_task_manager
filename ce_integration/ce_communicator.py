@@ -20,22 +20,21 @@ with open("../settings.yaml", 'r') as ymlfile:
     cfg = yaml.safe_load(ymlfile)
 
 sys.path.append("..")
-import common.settings as settings
+from common.settings import cfg
 import common.file_system_manager as fsm
 
 
-CE_SERVER = cfg['ce_server']
-SERVER_ADDRESS = cfg['current_server']
-RABBITMQ_ADDRESS = settings.rabbitmq_address[0]
-RABBITMQ_PORT = settings.rabbitmq_address[1]
-MONGO_SERVER = cfg['mongo_server']
-MONGO_DB = cfg['mongo_db']
-ENTRYPOINT_ID = cfg["entrypoint_id"]
-PROCESSING_POTENTIALACTION_ID = cfg["processing_potentialaction_id"]
-VERIFY_POTENTIALACTION_ID = cfg["verify_potentialaction_id"]
+CE_SERVER = cfg.ce_server
+SERVER_ADDRESS = cfg.current_server
+RABBITMQ_ADDRESS = cfg.rabbitmq_address.ip
+RABBITMQ_PORT = cfg.rabbitmq_address.port
+MONGO_SERVER = cfg.mongodb_address
+MONGO_DB = cfg.db_name
+ENTRYPOINT_ID = cfg.entrypoint_id
+PROCESSING_POTENTIALACTION_ID = cfg.processing_potentialaction_id
+VERIFY_POTENTIALACTION_ID = cfg.verify_potentialaction_id
 ALLOWED_EXTENSIONS = {'txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif'}
-UPLOAD_FOLDER = str(Path.home()) + cfg['upload_folder']
-
+UPLOAD_FOLDER = str(Path.home() / cfg.upload_folder)
 
 def add_to_queue(queue, routing_key, msg):
     connection = pika.BlockingConnection(
@@ -71,9 +70,9 @@ def store_sheet(source, potentialActionIdentifier):
         print("url retrieve end")
 
         # create entry into database
-        myclient = pymongo.MongoClient(MONGO_SERVER)
+        myclient = pymongo.MongoClient(MONGO_SERVER.ip, MONGO_SERVER.port)
         mydb = myclient[MONGO_DB]
-        mycol = mydb["sheets"]
+        mycol = mydb[cfg.col_sheet]
 
         result = {
             "name": os.path.splitext(filename)[0],
@@ -97,9 +96,9 @@ def poll_controlactions():
     # print(response.text)
     json_object = json.loads(response.text)
     # check of there are any new controlactions
-    myclient = pymongo.MongoClient(MONGO_SERVER)
+    myclient = pymongo.MongoClient(MONGO_SERVER.ip, MONGO_SERVER.port)
     mydb = myclient[MONGO_DB]
-    mycol = mydb["sheets"]
+    mycol = mydb[cfg.col_sheet]
     myquery = {}
     mydoc = mycol.find(myquery)
 
@@ -123,15 +122,15 @@ def poll_controlactions():
                 identifier = store_sheet(source, potentialActionIdentifier)
                 known_scores.append(name_only)
                 message = {'score_name': name_only, '_id': identifier}
-                add_to_queue('omr_planner_queue', 'omr_planner_queue', json.dumps(message))
+                add_to_queue(cfg.mq_omr_planner, cfg.mq_omr_planner, json.dumps(message))
                 # send message to omr planner that there is a new sheet
 
 
 def create_controlaction(task_id):
     # query task data from db
-    myclient = pymongo.MongoClient(MONGO_SERVER)
+    myclient = pymongo.MongoClient(MONGO_SERVER.ip, MONGO_SERVER.port)
     mydb = myclient[MONGO_DB]
-    mycol = mydb["tasks"]
+    mycol = mydb[cfg.col_task]
     query = {'_id': ObjectId(task_id)}
     result = mycol.find_one(query)
     name = result['name']
@@ -139,7 +138,7 @@ def create_controlaction(task_id):
     task_url = SERVER_ADDRESS + 'edit/' + task_id
     actionStatus = "PotentialActionStatus"
 
-    mycol2 = mydb["sheets"]
+    mycol2 = mydb[cfg.col_sheet]
     query2 = {"name": result['score']}
     mysheet = mycol2.find_one(query2)
     potential_action = mysheet['edit_action']
@@ -164,15 +163,15 @@ def create_controlaction(task_id):
         'name': result['name'],
         'type': 'edit'
     }
-    submitted_task_coll = mydb['submitted_tasks']
+    submitted_task_coll = mydb[cfg.col_submitted_task]
     submitted_task_coll.insert_one(submitted_task)
 
 
 def create_controlaction_verify(task_id):
     # query task data from db
-    myclient = pymongo.MongoClient(MONGO_SERVER)
+    myclient = pymongo.MongoClient(MONGO_SERVER.ip, MONGO_SERVER.port)
     mydb = myclient[MONGO_DB]
-    mycol = mydb["tasks"]
+    mycol = mydb[cfg.col_task]
     query = {'_id': ObjectId(task_id)}
     result = mycol.find_one(query)
     name = result['name']
@@ -180,7 +179,7 @@ def create_controlaction_verify(task_id):
     task_url = SERVER_ADDRESS + 'verify/' + task_id
     actionStatus = "PotentialActionStatus"
 
-    mycol2 = mydb["sheets"]
+    mycol2 = mydb[cfg.col_sheet]
     query2 = {"name": result['score']}
     mysheet = mycol2.find_one(query2)
     potential_action = mysheet['verify_action']
@@ -205,7 +204,7 @@ def create_controlaction_verify(task_id):
         'name': result['name'],
         'type': 'verify'
     }
-    submitted_task_coll = mydb['submitted_tasks']
+    submitted_task_coll = mydb[cfg.col_submitted_task]
     submitted_task_coll.update_one({'task_id': task_id, 'type': 'verify'}, {'$set': submitted_task}, True)
 
 
@@ -216,9 +215,9 @@ def update_control_action_status(identifier, action_status, task_type):
     # FailedActionStatus,
     # PotentialActionStatus
 
-    myclient = pymongo.MongoClient(MONGO_SERVER)
+    myclient = pymongo.MongoClient(MONGO_SERVER.ip, MONGO_SERVER.port)
     mydb = myclient[MONGO_DB]
-    mycol = mydb["submitted_tasks"]
+    mycol = mydb[cfg.col_submitted_task]
 
     entry = mycol.find_one({"task_id": identifier, "type": task_type})
     ce_identifier = entry['ce_identifier']
@@ -245,7 +244,7 @@ def main():
                     host=RABBITMQ_ADDRESS,
                     port=RABBITMQ_PORT))
             channel = connection.channel()
-            method_frame, header_frame, body = channel.basic_get('ce_communicator_queue')
+            method_frame, header_frame, body = channel.basic_get(cfg.mq_ce_communicator)
             if method_frame:
                 print(datetime.now(), str(body, 'utf-8'))
                 msg = json.loads(body.decode("utf-8"))

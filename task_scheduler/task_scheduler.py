@@ -3,7 +3,7 @@ import yaml
 import json
 import sys
 sys.path.append("..")
-import common.settings as settings
+from common.settings import cfg
 import common.file_system_manager as fsm
 
 from pymongo import MongoClient
@@ -15,20 +15,16 @@ import os
 from datetime import datetime
 import xml.etree.ElementTree as ET
 
-with open("../settings.yaml", "r") as file:
-    config = yaml.safe_load(file.read())
-
-rabbitmq_address = config['rabbitmq_address']
-address = rabbitmq_address.split(":")
-client = MongoClient(settings.mongo_address[0], int(settings.mongo_address[1]))
-db = client.trompa_test
+rabbitmq_address = cfg.rabbitmq_address
+client = MongoClient(cfg.mongodb_address.ip, cfg.mongodb_address.port)
+db = client[cfg.db_name]
 
 
 def send_message(queue_name, routing_key, message):
     connection = pika.BlockingConnection(
         pika.ConnectionParameters(
-            host=address[0],
-            port=address[1]))
+            host=rabbitmq_address.ip,
+            port=rabbitmq_address.port))
     channel = connection.channel()
     channel.queue_declare(queue=queue_name)
     channel.basic_publish(exchange='', routing_key=routing_key, body=message)
@@ -38,8 +34,8 @@ def send_message(queue_name, routing_key, message):
 def read_message(queue_name):
     connection = pika.BlockingConnection(
         pika.ConnectionParameters(
-            host=address[0],
-            port=address[1]))
+            host=rabbitmq_address.ip,
+            port=rabbitmq_address.port))
     channel = connection.channel()
     msg = ''
     method_frame, header_frame, body = channel.basic_get(queue_name)
@@ -68,7 +64,7 @@ def create_task_from_slice(measure_slice, status):
         'status': status,
         'xml': getXMLofSlice(measure_slice['score'], measure_slice['start'], measure_slice['end'])
         }
-    entry = db["tasks"].insert_one(task).inserted_id
+    entry = db[cfg.col_task].insert_one(task).inserted_id
 
     pathlib.Path(api_folder + "/static/" + task['score'] + "/slices/measures/").mkdir(parents=True, exist_ok=True)
     copy_folder = str(Path.home()) + "/omr_files/" + task['score'] + subfolder + task['name']
@@ -78,7 +74,7 @@ def create_task_from_slice(measure_slice, status):
 
 
 def getXMLofSlice(score, slice_begin_n, slice_end_n):
-    mycol = db["scores"]
+    mycol = db[cfg.col_score]
     myquery = {"name": score}
     mydoc = mycol.find_one(myquery)
     end_xml = ""
@@ -97,14 +93,14 @@ def getXMLofSlice(score, slice_begin_n, slice_end_n):
 
 def submit_task_to_ce(task_id):
     send_message(
-        'ce_communicator_queue',
-        'ce_communicator_queue',
+        cfg.mq_ce_communicator,
+        cfg.mq_ce_communicator,
         json.dumps({'action': 'edit task created', '_id': task_id}))
     return ''
 
 
 def create_context_for_tasks(score_name):
-    mycol = db['sheets']
+    mycol = db[cfg.col_sheet]
     myquery = {"name": score_name}
     mydoc = mycol.find_one(myquery)
     mei_path = mydoc['mei_path'][0]
@@ -126,7 +122,7 @@ def create_context_for_tasks(score_name):
             coordinates['lry'] = child.get('lry')
             mapping['#' + zone_id] = coordinates
 
-    mycol = db['tasks']
+    mycol = db[cfg.col_task]
     myquery = {"score": score_name}
     mydoc = mycol.find(myquery)
     task_context_collection = []
@@ -138,12 +134,12 @@ def create_context_for_tasks(score_name):
         task_context['image_path'] = task['image_path']
         task_context['score'] = task['score']
 
-        mycol2 = db['slices']
+        mycol2 = db[cfg.col_slice]
         myquery2 = {"_id": ObjectId(task['slice_id'])}
         mydoc2 = mycol2.find_one(myquery2)
         start = mydoc2['start']
         
-        mycol3 = db['scores']
+        mycol3 = db[cfg.col_score]
         myquery3 = {"name": mydoc2['score']}
         mydoc3 = mycol3.find_one(myquery3)
         xml = mydoc3['measures'][start]['xml']
@@ -157,7 +153,7 @@ def create_context_for_tasks(score_name):
         task_context['coords'] = coords
         task_context_collection.append(task_context)
 
-    mycol4 = db['task_context']
+    mycol4 = db[cfg.col_task_context]
     mycol4.insert_many(task_context_collection)
 
     # TODO: test this copy files
@@ -177,19 +173,19 @@ def main():
         print(datetime.now(), 'start task_scheduler')
         while True:
             # read task_scheduler_queue
-            data = read_message('task_scheduler_queue')
+            data = read_message(cfg.mq_task_scheduler)
             if data != '':
                 if(data['action'] == 'create_edit_tasks'):
-                    print('reading task_scheduler_queue')
+                    print('reading task scheduler queue')
                     score = data['name']
 
-                    mycol = db['slices']
+                    mycol = db[cfg.col_slice]
                     myquery = {"score": score}
                     mydoc = mycol.find(myquery)
                     for measure_slice in mydoc:
                         slice_length = measure_slice['end'] - measure_slice['start']
                         if(slice_length == 1):
-                            mycol2 = db['sheets']
+                            mycol2 = db[cfg.col_sheet]
                             myquery2 = {"name": score}
                             mydoc2 = mycol2.find_one(myquery2)
                             status = 'verification' if (mydoc2['edit_action'] == mydoc2['verify_action']) else 'annotation'
@@ -204,37 +200,37 @@ def main():
                                     task_id)
                             elif((mydoc2['source'] == 'CE') and (mydoc2['edit_action'] == mydoc2['verify_action']) ):
                                 send_message(
-                                    'ce_communicator_queue',
-                                    'ce_communicator_queue',
+                                    cfg.mq_ce_communicator,
+                                    cfg.mq_ce_communicator,
                                     json.dumps({
                                         'action': 'verify task created',
                                         '_id': task_id}))
                     create_context_for_tasks(score)
-            status_data = read_message('task_scheduler_status_queue')
+            status_data = read_message(cfg.mq_task_scheduler_status)
             if status_data != '':
                 # get status update from api,
                 # new result received
                 # check if task is verify or edit,
                 # if enough, then send msg to aggregator
                 if status_data['module'] == 'api':
-                    tasks_col = db['tasks']
+                    tasks_col = db[cfg.col_task]
                     tasks_query = {"_id": ObjectId(status_data['identifier'])}
                     tasks_doc = tasks_col.find_one(tasks_query)
 
                     if (tasks_doc['status'] == 'annotation') and (status_data['type'] == 'edit'):
-                        mycol = db['results']
+                        mycol = db[cfg.col_result]
                         myquery = {
                             "task_id": status_data['identifier'],
                             "result_type": "edit"}
                         mydoc = mycol.find(myquery)
                         if (mydoc.count() == 1):
-                            mycol2 = db['sheets']
+                            mycol2 = db[cfg.col_sheet]
                             myquery2 = {"name": tasks_doc['score']}
                             mydoc2 = mycol2.find_one(myquery2)
                             if(mydoc2['source'] == 'CE'):
                                 send_message(
-                                    'ce_communicator_queue',
-                                    'ce_communicator_queue',
+                                    cfg.mq_ce_communicator,
+                                    cfg.mq_ce_communicator,
                                     json.dumps({
                                         'action': 'task active',
                                         'identifier': status_data['identifier'],
@@ -242,19 +238,19 @@ def main():
                                         'status': 'ActiveActionStatus'}))
                         elif mydoc.count() > 2:
                             send_message(
-                                'aggregator_xml_queue',
-                                'aggregator_xml_queue',
+                                cfg.mq_aggregator_xml,
+                                cfg.mq_aggregator_xml,
                                 json.dumps({'task_id': status_data['identifier']})
                                 )
                     elif (tasks_doc['status'] == 'verification') and (status_data['type'] == 'verify'):
-                        mycol = db['results']
+                        mycol = db[cfg.col_result]
                         myquery = {
                             "task_id": status_data['identifier'],
                             "result_type": "verify"}
                         mydoc = mycol.find(myquery)
                         results_count = mydoc.count()
 
-                        mycol = db['results']
+                        mycol = db[cfg.col_result]
                         myquery = {
                             "task_id": status_data['identifier'],
                             "result_type": "verify",
@@ -265,63 +261,63 @@ def main():
                         ratio = results_count_true / results_count
 
                         if (results_count >= 3) and (ratio >= 0.6):
-                            mycol = db['tasks']
+                            mycol = db[cfg.col_task]
                             myquery = {"_id": ObjectId(status_data['identifier'])}
 
                             update_thing = {'$set': {'status': "complete"}}
                             mydoc = mycol.update_one(myquery, update_thing)
 
-                            mycol2 = db['sheets']
+                            mycol2 = db[cfg.col_sheet]
                             myquery2 = {"name": tasks_doc['score']}
                             mydoc2 = mycol2.find_one(myquery2)
                             if(mydoc2['source'] == 'CE'):
                                 send_message(
-                                    'ce_communicator_queue',
-                                    'ce_communicator_queue',
+                                    cfg.mq_ce_communicator,
+                                    cfg.mq_ce_communicator,
                                     json.dumps({
                                         'action': 'task completed',
                                         'identifier': status_data['identifier'],
                                         'type': 'verify',
                                         'status': 'CompletedActionStatus'}))
 
-                            mycol = db['tasks']
+                            mycol = db[cfg.col_task]
                             myquery = {"_id": ObjectId(status_data['identifier'])}
                             mydoc = mycol.find_one(myquery)
 
                             send_message(
-                                'omr_planner_status_queue',
-                                'omr_planner_status_queue',
+                                cfg.mq_omr_planner_status,
+                                cfg.mq_omr_planner_status,
                                 json.dumps({
                                     'module': 'task_scheduler',
                                     '_id': status_data['identifier'],
                                     'name': mydoc['score']}))
                         elif (results_count >= 3) and (ratio < 0.6):
-                            mycol = db['tasks']
+                            mycol = db[cfg.col_task]
                             myquery = {"_id": ObjectId(status_data['identifier'])}
 
                             update_thing = {'$set': {'status': "annotation"}}
                             mydoc = mycol.update_one(myquery, update_thing)
 
                             # delete documents with verification results
-                            mycol = db['results']
+                            mycol = db[cfg.col_result]
                             myquery = {
                                 "task_id": status_data['identifier'],
                                 "result_type": "verify"}
                             mydoc = mycol.delete_many(myquery)
 
-                            mycol = db['results']
+                            mycol = db[cfg.col_result]
                             myquery = {
                                 "task_id": status_data['identifier'],
                                 "result_type": "edit"}
                             mydoc = mycol.delete_many(myquery)
 
-                            mycol2 = db['sheets']
+                            mycol2 = db[cfg.col_sheet]
                             myquery2 = {"name": tasks_doc['score']}
                             mydoc2 = mycol2.find_one(myquery2)
                             if(mydoc2['source'] == 'CE'):
                                 send_message(
-                                    'ce_communicator_queue',
-                                    'ce_communicator_queue',
+                                    cfg.mq_ce_communicator,
+                                    cfg.mq_ce_communicator,
                                     json.dumps({
                                         'action': 'task completed',
                                         'identifier': status_data['identifier'],
@@ -329,8 +325,8 @@ def main():
                                         'status': 'FailedActionStatus'}))
                                 if(mydoc2['edit_action'] != mydoc2['verify_action']):
                                     send_message(
-                                        'ce_communicator_queue',
-                                        'ce_communicator_queue',
+                                        cfg.mq_ce_communicator,
+                                        cfg.mq_ce_communicator,
                                         json.dumps({
                                             'action': 'task completed',
                                             'identifier': status_data['identifier'],
@@ -338,23 +334,23 @@ def main():
                                             'status': 'PotentialActionStatus'}))
                 if status_data['module'] == 'aggregator_xml':
                     if status_data['status'] == 'complete':
-                        mycol = db['results_agg']
+                        mycol = db[cfg.col_aggregated_result]
                         myquery = {"task_id": status_data['_id']}
                         new_xml = mycol.find_one(myquery)['xml']
 
-                        mycol = db['tasks']
+                        mycol = db[cfg.col_task]
                         myquery = {"_id": ObjectId(status_data['_id'])}
                         update_thing = {'$set': {'status': "verification", 'xml': new_xml}}
                         mydoc = mycol.update_one(myquery, update_thing)
                         tasks_doc = mycol.find_one(myquery)
 
-                        mycol2 = db['sheets']
+                        mycol2 = db[cfg.col_sheet]
                         myquery2 = {"name": tasks_doc['score']}
                         mydoc2 = mycol2.find_one(myquery2)
                         if(mydoc2['source'] == 'CE'):
                             send_message(
-                                'ce_communicator_queue',
-                                'ce_communicator_queue',
+                                cfg.mq_ce_communicator,
+                                cfg.mq_ce_communicator,
                                 json.dumps({
                                     'action': 'task completed',
                                     'identifier': status_data['_id'],
@@ -362,14 +358,14 @@ def main():
                                     'status': 'CompletedActionStatus'}))
 
                             send_message(
-                                'ce_communicator_queue',
-                                'ce_communicator_queue',
+                                cfg.mq_ce_communicator,
+                                cfg.mq_ce_communicator,
                                 json.dumps({
                                     'action': 'verify task created',
                                     '_id': status_data['_id']}))
                     if status_data['status'] == 'failed':
                         # delete documents with verification results
-                        mycol = db['results']
+                        mycol = db[cfg.col_result]
                         myquery = {
                             "task_id": status_data['_id'],
                             "result_type": "edit"}

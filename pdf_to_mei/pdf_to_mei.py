@@ -3,7 +3,7 @@ import pika
 import json
 
 sys.path.append("..")
-import common.settings as settings
+from common.settings import cfg
 import common.file_system_manager as fsm
 
 import measure_detector.folder_to_mei as to_mei
@@ -15,18 +15,18 @@ from pathlib import Path
 
 
 connection = pika.BlockingConnection(pika.ConnectionParameters(
-    settings.rabbitmq_address[0],
-    settings.rabbitmq_address[1]
+    cfg.rabbitmq_address.ip,
+    cfg.rabbitmq_address.port
     ))
 channel = connection.channel()
-channel.queue_declare(queue=settings.new_item_queue_name)
+channel.queue_declare(queue=cfg.mq_new_item)
 
 
 def add_to_queue(queue, routing_key, msg):
     connection = pika.BlockingConnection(
         pika.ConnectionParameters(
-            host=settings.rabbitmq_address[0],
-            port=settings.rabbitmq_address[1]))
+            host=cfg.rabbitmq_address.ip,
+            port=cfg.rabbitmq_address.port))
     channel = connection.channel()
     channel.queue_declare(queue=queue)
     channel.basic_publish(exchange='', routing_key=routing_key, body=msg)
@@ -40,10 +40,10 @@ def callback(ch, method, properties, body):
 
     # Initiate mongo client and sheet collection
     client = MongoClient(
-        settings.mongo_address[0],
-        int(settings.mongo_address[1]))
-    db = client.trompa_test
-    sheet_collection = db[settings.sheet_collection_name]
+        cfg.mongodb_address.ip,
+        cfg.mongodb_address.port)
+    db = client[cfg.db_name]
+    sheet_collection = db[cfg.col_sheet]
 
     # Get PDF sheet entry
     pdf_sheet = sheet_collection.find_one(ObjectId(pdf_id))
@@ -96,10 +96,10 @@ def main():
         while True:
             connection = pika.BlockingConnection(
                 pika.ConnectionParameters(
-                    host=settings.rabbitmq_address[0],
-                    port=settings.rabbitmq_address[1]))
+                    host=cfg.rabbitmq_address.ip,
+                    port=cfg.rabbitmq_address.port))
             channel = connection.channel()
-            method_frame, header_frame, body = channel.basic_get(settings.new_item_queue_name)
+            method_frame, header_frame, body = channel.basic_get(cfg.mq_new_item)
             if method_frame:
                 channel.basic_ack(method_frame.delivery_tag)
                 callback(channel, method_frame, '', body)
