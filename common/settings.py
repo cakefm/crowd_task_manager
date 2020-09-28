@@ -24,6 +24,7 @@ class Cfg(object):
         self._type_dict = {
             "int": int,
             "float": float,
+            "bool" : bool,
             "ip": lambda x: IP_address(*map(lambda y,z: y(z), [str, int], x.split(":"))),
             "path" : Path
         }

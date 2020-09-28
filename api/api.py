@@ -576,9 +576,11 @@ def get_task(variable):
     }
     return jsonify(result)
 
-
 if __name__ == "__main__":
     app.debug = True
     print('in the main')
-    context = ('crowdmanager_eu.crt', 'crowdmanager.eu.key')
-    app.run(host='0.0.0.0', port=443, ssl_context=context)
+    if cfg.use_cert:
+        context = ('crowdmanager_eu.crt', 'crowdmanager.eu.key')
+        app.run(host='0.0.0.0', port=443, ssl_context=context)
+    else:
+        app.run(host='0.0.0.0', port=443)

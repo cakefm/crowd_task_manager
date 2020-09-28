@@ -1,0 +1,53 @@
+# Mongo DB
+mongodb_address|ip: "mongo:27017" # ip:port
+db_name: "trompa_test"
+col_slice: "slices"
+col_score: "scores"
+col_sheet: "sheets"
+col_aggregated_result: "results_agg"
+col_result: "results"
+col_task: "tasks"
+col_task_context: "task_context"
+col_submitted_task: "submitted_tasks"
+
+# Rabbit MQ
+rabbitmq_address|ip: "rabbitmq:5672" # ip:port
+mq_new_item: "measure_detector_queue"
+mq_sheet: "sheet_queue"
+mq_score: "score_queue"
+mq_score_rebuilder: "score_rebuilder_queue"
+mq_aggregator: "aggregator_queue"
+mq_github_init: "github_init_queue"
+mq_github: "github_queue"
+mq_aggregator_xml: "aggregator_xml_queue"
+mq_aggregator_form: "aggregator_form_queue"
+mq_omr_planner: "omr_planner_queue"
+mq_omr_planner_status: "omr_planner_status_queue"
+mq_task_status: "task_status_queue"
+mq_task_scheduler: "task_scheduler_queue"
+mq_task_scheduler_status: "task_scheduler_status_queue"
+mq_ce_communicator: "ce_communicator_queue"
+mq_aligner: "aligner_queue"
+
+# Paths
+upload_folder|path: "/omr_files/"
+base_sheet_path|path: "D:\\omr_files"
+
+# Github
+github_user: ""
+github_token: ""
+github_organization: ""
+github_branch: ""
+github_commit_count_before_push|int: 5
+
+# Aggregator
+aggregator_xml_threshold|float|0...1: 0.6
+aggregator_form_threshold|float|0...1: 0.6
+
+# Other
+use_cert|bool: false
+ce_server: "https://api-test.trompamusic.eu/" # Should be dummy server
+current_server: ""
+entrypoint_id: ""
+processing_potentialaction_id: ""
+verify_potentialaction_id: ""

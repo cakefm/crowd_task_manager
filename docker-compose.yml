@@ -1,0 +1,15 @@
+version: "3.8"
+services:
+  web:
+    build: .
+    ports:
+      - "443:443"
+  mongo:
+    image: "mongo"
+    ports:
+      - 27017
+  rabbitmq:
+    image: "rabbitmq"
+    expose:
+      - 5672
+      - 5673
