@@ -1,5 +1,5 @@
 # Mongo DB
-mongodb_address|ip: "mongo:27017" # ip:port
+mongodb_address|ip: "mongodb:27017" # ip:port
 db_name: "trompa_test"
 col_slice: "slices"
 col_score: "scores"

@@ -374,10 +374,12 @@ def send_message(queue_name, routing_key, message):
 @app.route('/upload', methods=['POST', 'GET'])
 def upload_sheet():
     if request.method == 'POST':
+        print("POSTED")
         # check if the post request has the file part
         if 'file' not in request.files:
             flash('No file part')
             return redirect(request.url)
+        print("TEST1")
         file = request.files['file']
         mei = request.files['mei']
         # if user does not select file, browser also
@@ -385,13 +387,14 @@ def upload_sheet():
         if file.filename == '':
             flash('No selected file')
             return redirect(request.url)
+        print("TEST2")
         if file and allowed_file(file.filename):
             filename = secure_filename(file.filename)
             data_folder = Path(app.config['UPLOAD_FOLDER'])
             data_folder = data_folder / os.path.splitext(file.filename)[0]
             pathlib.Path(data_folder).mkdir(parents=True, exist_ok=True)
-            uid = pwd.getpwnam("ubuntu").pw_uid
-            gid = grp.getgrnam("ubuntu").gr_gid
+            uid = os.geteuid()
+            gid = os.getegid()
             os.chown(data_folder, uid, gid)
             data_folder = data_folder / "whole"
             sheet_path = data_folder / filename
@@ -415,6 +418,7 @@ def upload_sheet():
             mycol = mydb[cfg.col_sheet]
             # copy file to omr_files
             data_folder_temp = Path(UPLOAD_FOLDER_TEMP)
+            data_folder_temp.mkdir(parents=True, exist_ok=True)
             os.chown(data_folder_temp, uid, gid)
             pathlib.Path(data_folder_temp).mkdir(parents=True, exist_ok=True)
             sheet_path_temp = data_folder_temp / filename
@@ -431,6 +435,7 @@ def upload_sheet():
             identifier = mycol.insert_one(result).inserted_id
             # send message to omr_planner
             message = {'score_name': os.path.splitext(filename)[0], '_id': str(identifier)}
+            print("SENDING QUEUE MESSAGE")
             send_message(
                 cfg.mq_omr_planner,
                 cfg.mq_omr_planner,
@@ -480,8 +485,8 @@ def download_from_url():
                 app.config['UPLOAD_FOLDER'],
                 os.path.splitext(filename)[0])
             pathlib.Path(path_whole_files).mkdir(parents=True, exist_ok=True)
-            uid = pwd.getpwnam("ubuntu").pw_uid
-            gid = grp.getgrnam("ubuntu").gr_gid
+            uid = os.geteuid()
+            gid = os.getegid()
             os.chown(path_whole_files, uid, gid)
             path_whole_files = os.path.join(
                 path_whole_files,
@@ -583,4 +588,5 @@ if __name__ == "__main__":
         context = ('crowdmanager_eu.crt', 'crowdmanager.eu.key')
         app.run(host='0.0.0.0', port=443, ssl_context=context)
     else:
+        app.secret_key = os.urandom(24)
         app.run(host='0.0.0.0', port=443)

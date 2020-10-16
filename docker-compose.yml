@@ -1,15 +1,25 @@
 version: "3.8"
 services:
-  web:
-    build: .
-    ports:
-      - "443:443"
-  mongo:
+  mongodb:
     image: "mongo"
-    ports:
+    expose:
       - 27017
   rabbitmq:
-    image: "rabbitmq"
+    image: "rabbitmq:management"
     expose:
       - 5672
       - 5673
+    ports:
+      - "15672:15672"
+  trompa:
+    build: .
+    ports:
+      - "443:443"
+    depends_on:
+      - mongodb
+      - rabbitmq
+    command:  sh -c "./wait && ./docker_start.sh"
+    tty: true
+    privileged: true
+    environment:
+      WAIT_HOSTS: mongodb:27017, rabbitmq:5672
