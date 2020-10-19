@@ -3,6 +3,7 @@ def run(sheet_name):
     import sys
     sys.path.append("..")
     import common.file_system_manager as fsm
+    from common.settings import cfg
 
     from glob import glob
     import json
@@ -72,7 +73,8 @@ def run(sheet_name):
     tqdm.write(f'Detecting measures in {len(image_paths)} images...')
     for image_path in tqdm(image_paths, unit='img'):
         with open(image_path, 'rb') as image:
-            response = requests.post('http://localhost:8000/upload', files={'image': image})
+            address = ":".join(map(str, cfg.measure_detector_address))
+            response = requests.post(f'http://{address}/upload', files={'image': image})
         measures = json.loads(response.content.decode('utf-8'))['measures']
         pages.append({'path': image_path, 'measures': measures})
 

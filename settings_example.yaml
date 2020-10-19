@@ -10,8 +10,12 @@
 # The second option indicates the range, which currently only works for numerical types (float/int).
 # The two values are separate by "...", with the left one being the lower limit and the right one being the upper.
 
+# Addresses ("ip:port")
+mongodb_address|ip: ""
+rabbitmq_address|ip: ""
+measure_detector_address|ip: ""
+
 # Mongo DB
-mongodb_address|ip: "" # "ip:port"
 db_name: "trompa_test"
 col_slice: "slices"
 col_score: "scores"
@@ -23,7 +27,6 @@ col_task_context: "task_context"
 col_submitted_task: "submitted_tasks"
 
 # Rabbit MQ
-rabbitmq_address|ip: "" # "ip:port"
 mq_new_item: "measure_detector_queue"
 mq_sheet: "sheet_queue"
 mq_score: "score_queue"
