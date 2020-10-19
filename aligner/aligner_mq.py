@@ -28,7 +28,7 @@ def callback(ch, method, properties, body):
 
     whole_dir = fsm.get_sheet_whole_directory(sheet_name)
     skeleton_path = whole_dir / 'aligned.mei'
-    partial_paths = [whole_dir / partial for partial in partial_file_names]
+    partial_paths = [whole_dir / partial for partial in partial_file_names if (whole_dir / partial).is_file()]
 
     # skeleton always has 1 section which just contains the measures and some additional tags
     skeleton_document = xml.parse(str(skeleton_path)).documentElement
