@@ -1,7 +1,6 @@
 import sys
 import pika
 import json
-import numpy as np
 
 sys.path.append("..")
 from common.settings import cfg
