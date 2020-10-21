@@ -58,7 +58,7 @@ def purge_non_element_nodes(tree):
     '''
     root = tree.cloneNode(True)
     for indexed_node in traverse_tree(root, filter_function=lambda x : x):
-        if indexed_node.node.nodeType != xml.Node.ELEMENT_NODE:
+        if indexed_node.node.nodeType != xml.Node.ELEMENT_NODE and indexed_node.node.parentNode:
             indexed_node.node.parentNode.removeChild(indexed_node.node)
     return root
 
