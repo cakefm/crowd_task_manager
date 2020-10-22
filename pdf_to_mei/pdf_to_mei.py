@@ -61,8 +61,7 @@ def callback(ch, method, properties, body):
         page_path = img_pages_path / f'page_{index}.jpg'
         page.save(page_path, 'JPEG')
         sheet_collection.update_one({'sheet_path': str(pdf_sheet_path)},
-                                    {'$push': {'pages_path': str(page_path)}},
-                                    upsert=True)
+                                    {'$push': {'pages_path': str(page_path)}})
         print(f"{index} pages out of {len(pages)}")
     print("DONE")
 
@@ -71,11 +70,9 @@ def callback(ch, method, properties, body):
     to_mei.run(pdf_sheet_name)
 
     # Update sheet on mongo
-    # TODO: This doesn't seem necessary given that the mei will always be called "aligned.mei", the fsm can handle the paths
     mei_path = fsm.get_sheet_whole_directory(pdf_sheet_name) / "aligned.mei"
     sheet_collection.update_one({'_id': ObjectId(pdf_id)},
-                                {'$push': {'mei_path': str(mei_path)}},
-                                upsert=True)
+                                {'$push': {'mei_path': str(mei_path)}})
 
     # Output name to sheet queue
     status_update_msg = {
