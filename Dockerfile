@@ -6,6 +6,7 @@ RUN pip3 install -r $HOME/crowd-task-manager/requirements.txt
 RUN apt-get install -y screen
 RUN apt-get install -y curl
 RUN apt-get install -y netcat
+RUN apt-get install -y poppler-utils
 COPY . /root/crowd-task-manager
 COPY ./settings_docker.yaml /root/crowd-task-manager/settings.yaml
 WORKDIR /root/crowd-task-manager/
