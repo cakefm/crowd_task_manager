@@ -37,6 +37,7 @@ def read_message(queue_name):
             host=rabbitmq_address.ip,
             port=rabbitmq_address.port))
     channel = connection.channel()
+    channel.queue_declare(queue=queue_name)
     msg = ''
     method_frame, header_frame, body = channel.basic_get(queue_name)
     if method_frame:
