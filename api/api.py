@@ -168,8 +168,8 @@ def taskpost(variable):
     mycol.insert_one(result)
 
     send_message(
-        'task_scheduler_status_queue',
-        'task_scheduler_status_queue',
+        cfg.mq_task_scheduler_status,
+        cfg.mq_task_scheduler_status,
         json.dumps({
             'action': 'result',
             'module': 'api',
