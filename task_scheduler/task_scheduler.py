@@ -189,7 +189,13 @@ def main():
                             mycol2 = db[cfg.col_sheet]
                             myquery2 = {"name": score}
                             mydoc2 = mycol2.find_one(myquery2)
-                            status = 'verification' if (mydoc2['edit_action'] == mydoc2['verify_action']) else 'annotation'
+
+                            # TODO: we need a way to specify the type of task without depending on the CE
+                            # for testing purposes. For now, always choose 'annotation'
+                            if mydoc2['source'] == 'CE':
+                                status = 'verification' if (mydoc2['edit_action'] == mydoc2['verify_action']) else 'annotation'
+                            else:
+                                status = 'annotation'
 
                             task_id = create_task_from_slice(measure_slice, status)
                             print(datetime.now(), 'created task ', task_id)
