@@ -28,7 +28,7 @@ def callback(ch, method, properties, body):
 
     whole_dir = fsm.get_sheet_whole_directory(sheet_name)
     skeleton_path = whole_dir / 'aligned.mei'
-    partial_paths = [whole_dir / partial for partial in partial_file_names if (whole_dir / partial).is_file()]
+    partial_paths = [whole_dir / partial for partial in partial_file_names]
 
     # skeleton always has 1 section which just contains the measures and some additional tags
     skeleton_document = xml.parse(str(skeleton_path)).documentElement
@@ -36,11 +36,12 @@ def callback(ch, method, properties, body):
     skeleton_section_xml = tt.purge_non_element_nodes(skeleton_section).toxml() 
     partial_sections_xml = []
     for partial_path in partial_paths:
-        partial = xml.parse(str(partial_path))
-        # We have to extract the measures and put them under a "fake" section root to get a similar structure as the skeleton
-        partial = tt.replace_child_nodes(tt.create_element_node("section"), partial.getElementsByTagName("measure"))
-        partial = tt.purge_non_element_nodes(partial)
-        partial_sections_xml.append(partial.toxml())
+        if partial_path.is_file():
+            partial = xml.parse(str(partial_path))
+            # We have to extract the measures and put them under a "fake" section root to get a similar structure as the skeleton
+            partial = tt.replace_child_nodes(tt.create_element_node("section"), partial.getElementsByTagName("measure"))
+            partial = tt.purge_non_element_nodes(partial)
+            partial_sections_xml.append(partial.toxml())
 
     # Perform the alignments and node picking
     aligned_trees = ta.align_trees_multiple([skeleton_section_xml] + partial_sections_xml)
