@@ -54,8 +54,8 @@ def callback(ch, method, properties, body):
         results_agg_coll.update_one({'task_id': task_id}, {'$set': result_agg}, True)
 
     global channel
-    channel.queue_declare(queue=cfg.mq_task_status)
-    channel.basic_publish(exchange="", routing_key=cfg.mq_task_status, body=json.dumps(status_update_msg))
+    channel.queue_declare(queue=cfg.mq_task_scheduler_status)
+    channel.basic_publish(exchange="", routing_key=cfg.mq_task_scheduler_status, body=json.dumps(status_update_msg))
 
 address = cfg.rabbitmq_address
 connection = pika.BlockingConnection(pika.ConnectionParameters(address.ip, address.port))
