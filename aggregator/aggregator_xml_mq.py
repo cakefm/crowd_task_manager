@@ -16,7 +16,7 @@ def callback(ch, method, properties, body):
     data = json.loads(body)
     task_id = data['task_id']
 
-    client = MongoClient(cfg.mongodb_address.ip, int(mongodb_address.port))
+    client = MongoClient(*cfg.mongodb_address)
     db = client[cfg.db_name]
 
     results = []
