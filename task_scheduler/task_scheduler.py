@@ -53,24 +53,29 @@ def read_message(queue_name):
 def create_task_from_slice(measure_slice, status):
     begin = measure_slice['start']
     end = measure_slice['end']
+    
+    # TODO: Slice type would be nice so we don't have to do this check
+    # right now we assume lines are the biggest possible slices
     difference = end - begin
-    subfolder = ["", "/slices/measures/", "/slices/double_measures/"]
-    subfolder = "/slices/lines/" if (end - begin) > 2 else subfolder[difference]
-    api_folder = str(os.path.abspath(os.path.join(os.getcwd(), '..', 'api')))
+    types = {
+        1 : "measures",
+        2 : "double_measures"
+    }
+    slice_type = "lines" if (difference > 2) else types[difference]
+    slice_location = str(fsm.get_sheet_slices_directory(measure_slice['score']) / slice_type / measure_slice['name'])
+    copy_destination = str(fsm.get_sheet_api_directory(measure_slice['score'], slice_type=slice_type) / measure_slice['name'])
+
     task = {
         'name': measure_slice['name'],
         'score': measure_slice['score'],
         'slice_id': str(measure_slice['_id']),
-        'image_path': measure_slice['score'] + subfolder + measure_slice['name'],
+        'image_path': slice_location,
         'status': status,
         'xml': getXMLofSlice(measure_slice['score'], measure_slice['start'], measure_slice['end'])
         }
     entry = db[cfg.col_task].insert_one(task).inserted_id
 
-    pathlib.Path(api_folder + "/static/" + task['score'] + "/slices/measures/").mkdir(parents=True, exist_ok=True)
-    copy_folder = str(Path.home()) + "/omr_files/" + task['score'] + subfolder + task['name']
-    copy_dest = api_folder + "/static/" + task['score'] + "/slices/measures/" + task['name']
-    copyfile(copy_folder, copy_dest)
+    copyfile(slice_location, copy_destination)
     return str(entry)
 
 
