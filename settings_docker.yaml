@@ -1,5 +1,9 @@
+# Addresses ("ip:port")
+mongodb_address|ip: "mongo:27017"
+rabbitmq_address|ip: "rabbitmq:5672"
+measure_detector_address|ip: "measure-detector:8000"
+
 # Mongo DB
-mongodb_address|ip: "mongodb:27017" # ip:port
 db_name: "trompa_test"
 col_slice: "slices"
 col_score: "scores"
@@ -11,10 +15,10 @@ col_task_context: "task_context"
 col_submitted_task: "submitted_tasks"
 
 # Rabbit MQ
-rabbitmq_address|ip: "rabbitmq:5672" # ip:port
 mq_new_item: "measure_detector_queue"
 mq_sheet: "sheet_queue"
 mq_score: "score_queue"
+mq_slicer: "slicer_queue"
 mq_score_rebuilder: "score_rebuilder_queue"
 mq_aggregator: "aggregator_queue"
 mq_github_init: "github_init_queue"
@@ -31,7 +35,7 @@ mq_aligner: "aligner_queue"
 
 # Paths
 upload_folder|path: "/omr_files/"
-base_sheet_path|path: "D:\\omr_files"
+base_sheet_path|path: "/omr_files/"
 
 # Github
 github_user: ""
