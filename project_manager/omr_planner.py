@@ -69,20 +69,19 @@ def main():
                     mycol = db[cfg.col_sheet]
                     myquery = {"name" : score_status['name']}
                     mydoc = mycol.find_one(myquery)
-                    if('submitted_mei_path' in mydoc):
-                        if(len(mydoc['submitted_mei_path']) > 0):
-                            print(
-                                datetime.now(),
-                                'sending ',
-                                score_status['name'], 'to aligner')
-                            send_message(
-                                cfg.mq_aligner,
-                                cfg.mq_aligner,
-                                json.dumps({
-                                    '_id': score_status['_id'],
-                                    'partials': [mydoc['submitted_mei_path']],
-                                    'name': score_status['name']}))
-                            continue
+                    if('submitted_mei_path' in mydoc and len(mydoc['submitted_mei_path']) > 0):
+                        print(
+                            datetime.now(),
+                            'sending ',
+                            score_status['name'], 'to aligner')
+                        send_message(
+                            cfg.mq_aligner,
+                            cfg.mq_aligner,
+                            json.dumps({
+                                '_id': score_status['_id'],
+                                'partials': [mydoc['submitted_mei_path']],
+                                'name': score_status['name']}))
+                        continue
                     else:
                         print(
                             datetime.now(),
