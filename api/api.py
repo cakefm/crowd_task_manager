@@ -374,12 +374,10 @@ def send_message(queue_name, routing_key, message):
 @app.route('/upload', methods=['POST', 'GET'])
 def upload_sheet():
     if request.method == 'POST':
-        print("POSTED")
         # check if the post request has the file part
         if 'file' not in request.files:
             flash('No file part')
             return redirect(request.url)
-        print("TEST1")
         file = request.files['file']
         mei = request.files['mei']
         # if user does not select file, browser also
@@ -387,7 +385,6 @@ def upload_sheet():
         if file.filename == '':
             flash('No selected file')
             return redirect(request.url)
-        print("TEST2")
         if file and allowed_file(file.filename):
             filename = secure_filename(file.filename)
             data_folder = Path(app.config['UPLOAD_FOLDER'])
@@ -430,12 +427,12 @@ def upload_sheet():
                 "name": os.path.splitext(file.filename)[0],
                 "sheet_path": str(sheet_path),
                 "ts": datetime.now(),
-                "submitted_mei_path": str(mei_path)
+                "submitted_mei_path": str(mei_path),
+                "source" : "UI"
             }
             identifier = mycol.insert_one(result).inserted_id
             # send message to omr_planner
             message = {'score_name': os.path.splitext(filename)[0], '_id': str(identifier)}
-            print("SENDING QUEUE MESSAGE")
             send_message(
                 cfg.mq_omr_planner,
                 cfg.mq_omr_planner,
