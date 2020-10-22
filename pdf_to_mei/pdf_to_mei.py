@@ -81,8 +81,8 @@ def callback(ch, method, properties, body):
         'status': 'complete',
         'name': pdf_sheet_name}
     add_to_queue(
-        'omr_planner_status_queue',
-        'omr_planner_status_queue',
+        cfg.mq_omr_planner_status,
+        cfg.mq_omr_planner_status,
         json.dumps(status_update_msg))
     print(f"Published PDF->MEI converted sheet {pdf_sheet_name} to message queue!")
 
