@@ -1,9 +1,14 @@
 version: "3.8"
 services:
-  mongodb:
+  mongo:
     image: "mongo"
     expose:
       - 27017
+  mongo-express:
+    image: mongo-express
+    restart: always
+    ports:
+      - "8081:8081"
   rabbitmq:
     image: "rabbitmq:management"
     expose:
@@ -11,15 +16,22 @@ services:
       - 5673
     ports:
       - "15672:15672"
+    logging:
+      driver: none
+  measure-detector:
+    build: https://github.com/cemfi/measure-detector.git
+    expose:
+      - 8000
   trompa:
     build: .
     ports:
       - "443:443"
     depends_on:
-      - mongodb
+      - mongo
       - rabbitmq
+      - measure-detector
     command:  sh -c "./wait && ./docker_start.sh"
     tty: true
     privileged: true
     environment:
-      WAIT_HOSTS: mongodb:27017, rabbitmq:5672
+      WAIT_HOSTS: mongo:27017, rabbitmq:5672, measure-detector:8000
