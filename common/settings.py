@@ -47,8 +47,11 @@ class Cfg(object):
 
         if len(split) > 1:
             value_type = self._type_dict[split[1]]
-            value = value_type(value)
-
+            try:
+                value = value_type(value)
+            except TypeError as exception:
+                 raise ValueError(f"Could not parse field {name} as a value of type '{split[1]}'") from exception
+   
             if len(split) > 2 and not IGNORE_RANGES:
                 value_range = tuple(map(value_type, split[2].split("...")))
                 value = max(value_range[0], min(value, value_range[1]))
