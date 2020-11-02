@@ -52,22 +52,29 @@ def get_sheet_git_directory(sheet_name:str):
     file_path.mkdir(parents=True, exist_ok=True)
     return file_path
 
-def get_sheet_api_directory(sheet_name:str, nesting:int=1, slice_type:str=None):
+
+def get_root_directory():
+    '''
+    Get the root folder. Currently it is found by just finding the 
+    first folder up with a requirements.txt in it.
+    '''
+
+    root = Path.cwd()
+    while not (root / "requirements.txt").exists()
+        root = root.parent
+
+    return root
+
+def get_sheet_api_directory(sheet_name:str, slice_type:str=None):
     '''
     Get the path to the static api folder of the current sheet 
     and recursively create the folders if they don't exist.
 
-    Optionally provide the nesting level for the module this is
-    being called from, by default it is 1.
-
     When given a slice type, it will extend the path to the folder
     of that type of slice and make sure it exists.
     '''
-    root = Path.cwd()
-    for _ in range(nesting):
-        root = root.parent
 
-    file_path = root / "api" / "static" / sheet_name
+    file_path = get_root_directory() / "api" / "static" / sheet_name
     if slice_type:
         file_path = file_path / "slices" / slice_type
     file_path.mkdir(parents=True, exist_ok=True)
