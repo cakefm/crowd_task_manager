@@ -60,7 +60,7 @@ def get_root_directory():
     '''
 
     root = Path.cwd()
-    while not (root / "requirements.txt").exists()
+    while not (root / "requirements.txt").exists():
         root = root.parent
 
     return root
