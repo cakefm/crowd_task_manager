@@ -92,3 +92,6 @@ def get_clean_sheet_git_directory(sheet_name:str):
     git_dir = get_sheet_git_directory(sheet_name)
     shutil.rmtree(str(git_dir), onerror=on_rm_error)
     return get_sheet_git_directory(sheet_name)
+
+def get_task_types_directory():
+    return get_root_directory() / "task_scheduler" / "tasks"
