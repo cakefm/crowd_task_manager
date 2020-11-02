@@ -1,5 +1,5 @@
 echo "Starting modules..."
-./run_modules.sh
+./docker_run_modules.sh
 echo "Waiting for port 443 to open..."
 while ! nc -z localhost 443:
 do   
