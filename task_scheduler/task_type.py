@@ -24,7 +24,7 @@ class TaskType():
         self.slice_type = data["slice_type"]
         self.slice_tuple_size = 0 # matches everything
         if ":" in self.slice_type:
-            self.slice_type, slice_tuple_size = slice_type.split(":")
+            self.slice_type, slice_tuple_size = self.slice_type.split(":")
             self.slice_tuple_size = int(slice_tuple_size)
         self.db = db
     
@@ -44,18 +44,28 @@ class TaskType():
     
     # TODO: potentially redundant to test the full chain every time as we could stop at the first incomplete dependency
     # but might be good to keep it like this for additional safety
-    def can_execute(self):
+    def can_execute(self, score):
         chain = self.get_dependency_chain()
         CFG_PLACEHOLDER = 1
-        done = [task_type.get_completion_status() >= CFG_PLACEHOLDER for task_type in chain]
+        done = [task_type.get_completion_status(score) >= CFG_PLACEHOLDER for task_type in chain]
         if all(done):
             return True
         return False
-            
-    def get_completion_status(self):
-        all_tasks = self.db[cfg.col_task].count_documents({"type": self.name})
+    
+    def get_slice_query(self, score):
+        slice_query = {
+            "type": self.name, 
+            "score": score,
+            "slice_type": self.slice_type
+        }
+        if self.slice_tuple_size > 0:
+            slice_query["tuple_size"] = self.slice_tuple_size
+        return slice_query
+
+    def get_completion_status(self, score):
+        relevant_slices = self.db[cfg.col_slice].count_documents(self.get_slice_query(score))
         completed_tasks = self.db[cfg.col_task].count_documents({"type": self.name, "status":DONE_STEP})
-        return 0 if all_tasks==0 else completed_tasks/all_tasks
+        return 0 if relevant_slices==0 else completed_tasks / relevant_slices
         
     def __repr__(self):
         return "<" + ";".join([
