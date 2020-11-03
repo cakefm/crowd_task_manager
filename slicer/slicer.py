@@ -67,7 +67,7 @@ class Slice(namedtuple("ImmutableSlice", ["score", "start", "end", "type", "tupl
         Creates a name based on the properties of the slice. slice_type can optionally be given to customize the
         name further based on the specifics on the slice being made.
         """
-        return f"{self.tuple_size}-{self.slice_type}_{self.start}-{self.end}.jpg"
+        return f"{self.tuple_size}-{self.type}_{self.start}-{self.end}.jpg"
 
     def get_measures(self):
         """

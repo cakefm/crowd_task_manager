@@ -56,7 +56,7 @@ class TaskType():
         slice_query = {
             "type": self.name, 
             "score": score,
-            "slice_type": self.slice_type
+            "type": self.slice_type
         }
         if self.slice_tuple_size > 0:
             slice_query["tuple_size"] = self.slice_tuple_size
