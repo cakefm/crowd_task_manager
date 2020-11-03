@@ -7,20 +7,22 @@ from PIL import Image
 class NotOnSamePageException(Exception):
     pass
 
-class Slice(namedtuple("ImmutableSlice", ["score", "start", "end", "same_line", "same_page"])):
+class Slice(namedtuple("ImmutableSlice", ["score", "start", "end", "type", "tuple_size", "same_line", "same_page"])):
     """
     Class for specifying slices and performing operations on them. It is initialized with a reference to
     a score instance, a starting measure index, and an ending measure index (exclusive, as in Python).
     Note that a slice is immutable, this will allow for precomputing certain properties of the measures within
     without worrying about changes to indices etc.
     """
-    def __new__(clazz, score, start, end):
+    def __new__(clazz, score, start, end, slice_type, tuple_size):
         """Doing this allows making additional computed fields immutable as well."""
         measures = score.measures[start:end]
         self = super(Slice, clazz).__new__(clazz,
             score,
             start,
             end,
+            slice_type,
+            tuple_size,
             all([measures[0].line == x.line for x in measures]),
             all([measures[0].page == x.page for x in measures]))
         return self
@@ -60,12 +62,12 @@ class Slice(namedtuple("ImmutableSlice", ["score", "start", "end", "same_line", 
         else:
             raise NotOnSamePageException(f"Measures {self.start}-{self.end} are not on the same page!")
 
-    def get_name(self, slice_type="slice"):
+    def get_name(self):
         """
         Creates a name based on the properties of the slice. slice_type can optionally be given to customize the
         name further based on the specifics on the slice being made.
         """
-        return f"{slice_type}_{self.start}-{self.end}.jpg"
+        return f"{self.tuple_size}-{self.slice_type}_{self.start}-{self.end}.jpg"
 
     def get_measures(self):
         """
@@ -81,7 +83,9 @@ class Slice(namedtuple("ImmutableSlice", ["score", "start", "end", "same_line", 
         "name" : self.get_name(), 
         "score" : self.score.name,
         "start" : self.start,
-        "end" : self.end
+        "end" : self.end,
+        "type" : self.type,
+        "tuple_size" : self.tuple_size
         }
 
 
@@ -197,7 +201,7 @@ class Score:
         for pages in iterator:
             start = pages[0].lines[0].measures[0].index
             end = pages[-1].lines[-1].measures[-1].index
-            slices.append(Slice(self, start, end + 1))
+            slices.append(Slice(self, start, end + 1, "pages", n))
         return slices
 
     def get_line_slices(self, n=1, start=0, end=None):
@@ -211,7 +215,7 @@ class Score:
         for lines in iterator:
             start = lines[0].measures[0].index
             end = lines[-1].measures[-1].index
-            slices.append(Slice(self, start, end + 1))
+            slices.append(Slice(self, start, end + 1, "lines", n))
         return slices
 
     def get_measure_slices(self, n=1, start=0, end=None):
@@ -225,7 +229,7 @@ class Score:
         for measures in iterator:
             start = measures[0].index
             end = measures[-1].index
-            slices.append(Slice(self, start, end + 1))
+            slices.append(Slice(self, start, end + 1, "measures", n))
         return slices
 
     def to_db_dict(self):
