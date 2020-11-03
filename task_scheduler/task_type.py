@@ -63,9 +63,9 @@ class TaskType():
         return slice_query
 
     def get_completion_status(self, score):
-        relevant_slices = self.db[cfg.col_slice].count_documents(self.get_slice_query(score))
+        all_tasks = self.db[cfg.col_task].count_documents({"type": self.name})
         completed_tasks = self.db[cfg.col_task].count_documents({"type": self.name, "status":DONE_STEP})
-        return 0 if relevant_slices==0 else completed_tasks / relevant_slices
+        return 0 if all_tasks==0 else completed_tasks / all_tasks
         
     def __repr__(self):
         return "<" + ";".join([
