@@ -4,3 +4,4 @@ steps:
 dependencies:
 - task1
 prioritization: page_order
+slice_type: "measures:1"          # Any of: measures, lines, pages. Add ':' with a number behind to specify specific tuples (e.g. add ':2' to only match double measures)

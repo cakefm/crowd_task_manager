@@ -21,6 +21,11 @@ class TaskType():
         self.dependencies = set(data["dependencies"])
         self.prioritization = getattr(priority_functions, data["prioritization"])
         self.steps = data["steps"]
+        self.slice_type = data["slice_type"]
+        self.slice_tuple_size = 0 # matches everything
+        if ":" in self.slice_type:
+            self.slice_type, slice_tuple_size = slice_type.split(":")
+            self.slice_tuple_size = int(slice_tuple_size)
         self.db = db
     
     # Checks for cycles as well

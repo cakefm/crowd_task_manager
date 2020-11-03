@@ -1,5 +1,6 @@
-requirements : []
-steps:
-- edit
-dependencies: []
-prioritization: page_order
+requirements : []                 # List of UI requirements for this task type
+steps:                            # Ordered steps for this task, any of: edit, verify
+- edit                            
+dependencies: []                  # Set of names of task types this task type depends on
+prioritization: page_order        # Any of the functions in priority_functions.py
+slice_type: "measures:1"          # Any of: measures, lines, pages. Add ':' with a number behind to specify specific tuples (e.g. add ':2' to only match double measures)
