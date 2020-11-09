@@ -75,7 +75,7 @@ fi
 if ! screen -list | grep -q "task_scheduler"; then
     echo 'starting task_scheduler'
     cd $HOME/crowd-task-manager/task_scheduler
-    screen -dm -S task_scheduler python3 task_scheduler.py
+    screen -dm -S task_scheduler python3 task_scheduler_new.py
 fi
 
 if ! screen -list | grep -q "aggregator"; then

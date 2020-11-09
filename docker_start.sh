@@ -6,7 +6,7 @@ do
 sleep 0.1 
 done
 echo "Sending PDF..."
-curl -F file=@/root/crowd-task-manager/testing_resources/pdf/beethoven.pdf -F "mei=@/dev/null;filename=" http://localhost:443/upload
+curl -F file=@/root/crowd-task-manager/testing_resources/pdf/beethoven_2_pages.pdf -F "mei=@/dev/null;filename=" http://localhost:443/upload
 echo "PDF sent succesfully!"
 
 # Modules required for testing setup

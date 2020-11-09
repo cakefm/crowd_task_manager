@@ -149,6 +149,7 @@ def task_xml(variable):
     return resp
 
 
+# TODO: This needs an overhaul
 # receive xml data
 @app.route('/<variable>', methods=['POST'])
 def taskpost(variable):

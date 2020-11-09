@@ -9,7 +9,7 @@ Contains the required settings for the python scripts from the yaml along with s
 
 # Some flags for debugging and convenience
 DYNAMIC_REFRESH = False
-CHECK_IF_CONFIG_PARSES = True
+CHECK_IF_CONFIG_PARSES = False
 IGNORE_RANGES = False
 SEPARATOR = "|"
 CFG_PATH = "../settings.yaml"

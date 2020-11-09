@@ -13,6 +13,8 @@ col_result: "results"
 col_task: "tasks"
 col_task_context: "task_context"
 col_submitted_task: "submitted_tasks"
+col_task_type: "task_types"
+col_task_batch: "task_batches"
 
 # Rabbit MQ
 mq_new_item: "measure_detector_queue"
