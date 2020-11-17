@@ -228,6 +228,56 @@ def update_control_action_status(identifier, action_status, task_type):
     response = requests.request("POST", url, data=payload, headers=headers)
     print(response.text)
 
+def create_task_group(entrypoint_id, potentialaction_id, digitaldocument_id):
+	url = "https://api-test.trompamusic.eu/"
+	# TODO: get entrypointid and potentialactionid from settings.yaml
+
+	payload = "{\"query\":\"mutation {\\n  verifyTaskGroup: RequestControlAction(\\n    controlAction: {\\n      entryPointIdentifier: \\\"%s\\\"\\n      potentialActionIdentifier: \\\"%s\\\"\\n      potentialAction: {\\n        name: \\\"Verify/edit\\\"\\n        title: \\\"Verify/edit\\\" }\\n    } )\\n  {\\n    identifier\\n  }\\n}\"}"
+	headers = {'Content-Type': 'application/json'}
+	payload = payload % (entrypoint_id, potentialaction_id)
+	response = requests.request("POST", url, data=payload, headers=headers)
+	data = json.loads(response.text)
+	ce_id = data['data']['RequestControlAction']['identifier']
+	# TODO: store the task group id
+	# print(response.text)
+
+	url = "https://api-test.trompamusic.eu/"
+	payload = "{\"query\":\"mutation {\\n  AddControlActionObject(\\n    from: { identifier: \\\"%s\\\" }\\n    to: { identifier: \\\"%s\\\" } ){\\n    from {\\n      identifier\\n    }\\n    to {\\n      identifier\\n    }\\n  }\\n}\"}"
+	payload = payload % (ce_id, digitaldocument_id)
+	headers = {'Content-Type': 'application/json'}
+	response = requests.request("POST", url, data=payload, headers=headers)
+	# data = json.loads(response.text)
+	# print(response.text)
+
+def create_task(entrypoint_id, potentialaction_id, digitaldocument_id, task_url, name, task_group_controlaction_id):
+	url = "https://api-test.trompamusic.eu/"
+	payload = "{\"query\":\"mutation {\\n  RequestControlAction(\\n    controlAction: {\\n      entryPointIdentifier: \\\"%s\\\" \\n      potentialActionIdentifier: \\\"%s\\\" \\n      potentialAction: {\\n        name: \\\"%s\\\"\\n        title: \\\"%s\\\"\\n        url: \\\"%s\\\"\\n      }\\n    } ){\\n    identifier\\n  }\\n}\"}"
+	headers = {'Content-Type': 'application/json'}
+	payload = payload % (entrypoint_id, potentialaction_id, name, title, task_url)
+	response = requests.request("POST", url, data=payload, headers=headers)
+	task_id = data['data']['RequestControlAction']['identifier']
+	# TODO: Store task id
+	# print(response.text)
+
+	url = "https://api-test.trompamusic.eu/"
+	payload = "{\"query\":\"mutation {\\n  AddControlActionObject(\\n    from: { \\n      identifier: \\\"%s\\\" \\n    }\\n    to: { \\n      identifier: \\\"%s\\\" \\n    } ){\\n    from {\\n      identifier\\n    }\\n    to \\n    {\\n      identifier\\n    }\\n  }\\n}\"}"
+	headers = {'Content-Type': 'application/json'}
+	payload = payload % (task_id, digitaldocument_id)
+	response = requests.request("POST", url, data=payload, headers=headers)
+
+	url = "https://api-test.trompamusic.eu/"
+	payload = "{\"query\":\"mutation {\\n  AddControlActionWasGeneratedBy(\\n    from: { \\n      identifier: \\\"%s\\\" \\n    }\\n    to: { \\n      identifier: \\\"%s\\\" \\n    } \\n  ){\\n    from {\\n      identifier\\n    }\\n    to {\\n      identifier\\n    }\\n  } \\n}\"}"
+	headers = {'Content-Type': 'application/json'}
+	payload = payload % (task_id, ask_group_controlaction_id)
+	response = requests.request("POST", url, data=payload, headers=headers)
+
+def update_task_group(task_group_controlaction_id, mei_url, action_status):
+	url = "https://api-test.trompamusic.eu/"
+	payload = "{\"query\":\"mutation {\\n  UpdateControlAction(\\n    identifier: \\\"%s\\\" \\n    url: \\\"%s\\\"\\n    actionStatus: %s \\n  ){\\n    identifier\\n    name\\n    url\\n    actionStatus\\n  } \\n}\"}"
+	headers = {'Content-Type': 'application/json'}
+	payload = payload % (task_group_controlaction_id, mei_url, action_status)
+	response = requests.request("POST", url, data=payload, headers=headers)
+
 
 def main():
     try:
