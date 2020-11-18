@@ -174,7 +174,7 @@ def taskpost(variable):
         json.dumps({
             'action': 'result',
             'module': 'api',
-            'identifier': variable,
+            '_id': variable,
             'type': result_type}))
 
     # # check if the task is complete

@@ -10,7 +10,9 @@ import xml.dom.minidom as xml
 
 from pymongo import MongoClient
 
-
+# TODO: It's better to make the score rebuilder "stupid", as in, it should rebuild 
+# the entire score from scratch from the data in the db. This way it can be triggered in a
+# rather generic way, at any point in the pipeline
 def callback(ch, method, properties, body):
     data = json.loads(body)
     sheet_name = data['name']
@@ -18,7 +20,6 @@ def callback(ch, method, properties, body):
 
     client = MongoClient(cfg.mongodb_address.ip, cfg.mongodb_address.port)
     db = client[cfg.db_name]
-    sheet_id = str(db[cfg.col_sheet].find_one({"name" : sheet_name})["_id"])
 
     # Obtain aggregated XML
     aggregated_result = db[cfg.col_aggregated_result].find_one({"task_id" : task_id})
@@ -41,15 +42,14 @@ def callback(ch, method, properties, body):
         mei_file.write(tt.purge_non_element_nodes(mei_xml.documentElement).toprettyxml())
 
     status_update_msg = {
-    '_id': sheet_id,
+    '_id': task_id,
     'module': 'score_rebuilder',
-    'status': 'complete',
-    'name': sheet_name
+    'status': 'complete'
     }
 
     global channel
-    channel.queue_declare(queue=cfg.mq_omr_planner_status)
-    channel.basic_publish(exchange="", routing_key=cfg.mq_omr_planner_status, body=json.dumps(status_update_msg))
+    channel.queue_declare(queue=cfg.mq_task_scheduler_status)
+    channel.basic_publish(exchange="", routing_key=cfg.mq_task_scheduler_status, body=json.dumps(status_update_msg))
 
 
 address = cfg.rabbitmq_address

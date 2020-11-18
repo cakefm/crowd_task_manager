@@ -21,7 +21,6 @@ def callback(channel, method, properties, body):
     payload = task['xml']
     for i in range(threshold):
         requests.post(f"http://localhost:443/{task['_id']}", data=payload)
-        time.sleep(0.1) # Just to make sure nothing weird happens
     print(f"Passed through task with ID {task['_id']} as result {threshold} times")
 
 if __name__ == "__main__":

@@ -40,6 +40,9 @@ def callback(ch, method, properties, body):
     client = MongoClient(cfg.mongodb_address.ip, cfg.mongodb_address.port)
     db = client[cfg.db_name]
 
+    # First clear all documents under this score name (which acts as key in our case)
+    db[cfg.col_slice].delete_many({"score": score.name})
+
     for slice_path, slice_list in slice_paths_lists.items():
         pathlib.Path(slice_path).mkdir(parents=True, exist_ok=True)
         for score_slice in slice_list:
@@ -48,10 +51,11 @@ def callback(ch, method, properties, body):
                 slice_res = db[cfg.col_slice].insert_one(score_slice.to_db_dict())
                 print(f"added entry {slice_res.inserted_id} to slices collection")
 
-    channel.queue_declare(queue = cfg.mq_omr_planner_status)
+    channel.queue_declare(queue=cfg.mq_omr_planner_status)
 
-    score_res = db[cfg.col_score].insert_one(score.to_db_dict())
-    print(f"added entry {score_res.inserted_id} to scores collection")
+    entry = db[cfg.col_score].replace_one({"name": score.name}, score.to_db_dict(), upsert=True)
+    if entry.upserted_id:
+        print(f"added entry {entry.upserted_id} to scores collection")
 
     status_update_msg = {
         '_id': data['_id'],

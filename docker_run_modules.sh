@@ -84,11 +84,11 @@ if ! screen -list | grep -q "aggregator"; then
     screen -dm -S aggregator python3 aggregator_xml_mq.py
 fi
 
-# if ! screen -list | grep -q "score_rebuilder"; then
-#     echo 'starting score_rebuilder'
-#     cd $HOME/crowd-task-manager/score_rebuilder
-#     screen -dm -S score_rebuilder bash -c 'python3 score_rebuilder_mq.py'
-# fi
+if ! screen -list | grep -q "score_rebuilder"; then
+    echo 'starting score_rebuilder'
+    cd $HOME/crowd-task-manager/score_rebuilder
+    screen -dm -S score_rebuilder python3 score_rebuilder_mq.py
+fi
 
 # if ! screen -list | grep -q "github_init"; then
 #     echo 'starting github_init'

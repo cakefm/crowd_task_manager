@@ -6,6 +6,7 @@ import sys
 sys.path.append("..")
 from common.settings import cfg
 import common.file_system_manager as fsm
+from collections import namedtuple
 
 from pymongo import MongoClient
 from bson.objectid import ObjectId
@@ -13,7 +14,21 @@ from bson.objectid import ObjectId
 rabbitmq_address = cfg.rabbitmq_address
 client = MongoClient(cfg.mongodb_address.ip, cfg.mongodb_address.port)
 db = client[cfg.db_name]
+scheduled_messages = {}
 
+
+def schedule_message(trigger, message, queue):
+    print(f"Scheduling message {message} on trigger {trigger} for queue {queue}")
+    scheduled_messages[trigger] = (message, queue)
+
+def check_scheduled_messages(trigger):
+    if trigger in scheduled_messages:
+        message, queue = scheduled_messages.pop(trigger)
+        send_message(
+            queue,
+            queue,
+            json.dumps(message)
+        )
 
 def read_message(queue_name):
     connection = pika.BlockingConnection(
@@ -65,7 +80,21 @@ def main():
 
             score_status = read_message(cfg.mq_omr_planner_status)
             if len(score_status) > 0:
+                module = score_status['module']
+                score_name = score_status['name']
+                check_scheduled_messages((module, score_name))
                 if score_status['module'] == 'measure_detector':
+                    # Probably a good time to create a campaign-status object,
+                    # only insert campaign status if it doesn't exist already though
+                    campaign_status = {
+                        "score_name": score_name, 
+                        "stages_done": [], 
+                        "task_types_done": [],
+                        "finished": False
+                    } 
+                    db[cfg.col_campaign_status].update_one({"score_name": score_name}, {"$setOnInsert": campaign_status}, upsert=True)
+
+
                     mycol = db[cfg.col_sheet]
                     myquery = {"name" : score_status['name']}
                     mydoc = mycol.find_one(myquery)
@@ -127,41 +156,45 @@ def main():
                             'name': score_status['name']}))
                     continue
                 if score_status['module'] == 'slicer':
-                    print(
-                        datetime.now(),
-                        'sending ',
-                        score_status['name'], 'task_scheduler')
-                    send_message(
-                        cfg.mq_task_scheduler,
-                        cfg.mq_task_scheduler,
+                    # First check campaign status
+                    campaign_status = db[cfg.col_campaign_status].find_one({"score_name": score_name})
+                    if campaign_status["finished"]:
+                        print(f"Campaign for {score_name} has finished, no need to do more tasks")
+                    else:
+                        print(
+                            datetime.now(),
+                            'sending ',
+                            score_status['name'], 'task_scheduler')
+                        send_message(
+                            cfg.mq_task_scheduler,
+                            cfg.mq_task_scheduler,
+                            json.dumps({
+                                '_id': score_status['_id'],
+                                'name': score_status['name'],
+                                'action': 'start_next_stage'}))
+
+                    continue
+                if score_status['module'] == 'task_scheduler' and 'stage' in score_status:
+                    # Task scheduler will always mention stage
+                    stage = score_status['stage']
+                    print(f"Completed stage {stage}")
+
+                    # For now just send to slicer
+                    # TODO: maybe later we should send to aligner first?
+                    if stage==0:
+                        print("Sending to slicer to rebuild")
+                        send_message(
+                        cfg.mq_slicer,
+                        cfg.mq_slicer,
                         json.dumps({
                             '_id': score_status['_id'],
-                            'name': score_status['name'],
-                            'action': 'create_edit_tasks'}))
-                    continue
-                if score_status['module'] == 'task_scheduler':
-                    # send message to score_rebuilder_queue
-                    print(
-                        datetime.now(),
-                        'sending ',
-                        score_status['name'], 'to score_rebuilder')
-                    send_message(
-                        cfg.mq_score_rebuilder,
-                        cfg.mq_score_rebuilder,
-                        json.dumps({
-                            'task_id': score_status['_id'],
                             'name': score_status['name']}))
-                    # print(
-                    #     datetime.now(),
-                    #     'sending ',
-                    #     score_status['name'], 'to task_scheduler')
-                    # send_message(
-                    #     'task_scheduler_queue',
-                    #     'task_scheduler_queue',
-                    #     json.dumps({
-                    #         '_id': score_status['_id'],
-                    #         'action': 'create_verify_task',
-                    #         'name': score_status['name']}))
+                if score_status['module'] == 'task_scheduler' and 'task_type' in score_status:
+                    task_type = score_status['task_type']
+                    print(f"Completed {task_type} for score {score_name}")
+
+                    # Here we should let the CE know some task type has been completed
+
                     continue
                 if score_status['module'] == 'github_init':
                     # communicate to ce that github repo has been initiated
@@ -169,6 +202,11 @@ def main():
                 if score_status['module'] == 'github_update':
                     # communicate with ce that github repo has been updated
                     continue
+
+                # TODO: Now that the score rebuilder is in the task loop, we might want
+                # to have github update in there as well. We can have it accumulate commits
+                # for every task, and then push when some batch has finished, via specific
+                # messages
                 if score_status['module'] == 'score_rebuilder':
                     # send message to github update?
                     print(
