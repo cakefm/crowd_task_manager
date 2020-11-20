@@ -12,7 +12,7 @@ from pymongo import MongoClient
 
 
 def callback(channel, method, properties, body):
-    message = json.loads(body)
+    message = json.loads(body)     
     task = db[cfg.col_task].find_one({"_id": ObjectId(message["task_id"])})
     task_type = db[cfg.col_task_type].find_one({"name": task["type"]})
     task_step = task["step"]
@@ -21,7 +21,11 @@ def callback(channel, method, properties, body):
     payload = task['xml']
     for i in range(threshold):
         requests.post(f"http://localhost:443/{task['_id']}", data=payload)
+        for j in range(25):
+            connection.process_data_events()
+            time.sleep(0.2)
     print(f"Passed through task with ID {task['_id']} as result {threshold} times")
+
 
 if __name__ == "__main__":
     processed = set()
