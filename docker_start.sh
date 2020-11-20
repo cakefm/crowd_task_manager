@@ -12,7 +12,7 @@ echo "PDF sent succesfully!"
 # Modules required for testing setup
 echo 'starting task_passthrough'
 cd $HOME/crowd-task-manager/task_scheduler
-screen -dm -S task_passthrough python3 task_passthrough.py
+screen -L -Logfile screen_log_task_passthrough -dm -S task_passthrough python3 task_passthrough.py
 
 # Module to view logs of after start-up
 screen -r task_scheduler

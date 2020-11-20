@@ -45,7 +45,7 @@
 if ! screen -list | grep -q "omr_planner"; then
     echo 'starting omr_planner'
     cd $HOME/crowd-task-manager/project_manager
-    screen -dm -S omr_planner python3 omr_planner.py
+    screen -L -Logfile screen_log -dm -S omr_planner python3 omr_planner.py
 fi
 
 # if ! screen -list | grep -q "ce_comm"; then
@@ -57,37 +57,37 @@ fi
 if ! screen -list | grep -q "pdf2mei"; then
     echo 'starting pdf2mei'
     cd $HOME/crowd-task-manager/pdf_to_mei
-    screen -dm -S pdf2mei python3 pdf_to_mei.py
+    screen -L -Logfile screen_log -dm -S pdf2mei python3 pdf_to_mei.py
 fi
 
 if ! screen -list | grep -q "aligner"; then
     echo 'starting aligner'
     cd $HOME/crowd-task-manager/aligner
-    screen -dm -S aligner python3 aligner_mq.py
+    screen -L -Logfile screen_log -dm -S aligner python3 aligner_mq.py
 fi
 
 if ! screen -list | grep -q "slicer"; then
     echo 'starting slicer'
     cd $HOME/crowd-task-manager/slicer
-    screen -dm -S slicer python3 slicer_mq.py
+    screen -L -Logfile screen_log -dm -S slicer python3 slicer_mq.py
 fi
 
 if ! screen -list | grep -q "task_scheduler"; then
     echo 'starting task_scheduler'
     cd $HOME/crowd-task-manager/task_scheduler
-    screen -dm -S task_scheduler python3 task_scheduler_new.py
+    screen -L -Logfile screen_log -L -Logfile screen_log -dm -S task_scheduler python3 task_scheduler_new.py
 fi
 
 if ! screen -list | grep -q "aggregator"; then
     echo 'starting aggregator'
     cd $HOME/crowd-task-manager/aggregator
-    screen -dm -S aggregator python3 aggregator_xml_mq.py
+    screen -L -Logfile screen_log -dm -S aggregator python3 aggregator_xml_mq.py
 fi
 
 if ! screen -list | grep -q "score_rebuilder"; then
     echo 'starting score_rebuilder'
     cd $HOME/crowd-task-manager/score_rebuilder
-    screen -dm -S score_rebuilder python3 score_rebuilder_mq.py
+    screen -L -Logfile screen_log -dm -S score_rebuilder python3 score_rebuilder_mq.py
 fi
 
 # if ! screen -list | grep -q "github_init"; then
