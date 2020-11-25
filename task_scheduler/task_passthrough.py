@@ -1,12 +1,14 @@
 import sys
 sys.path.append("..")
 from common.settings import cfg
+import common.tree_tools as tt
 import common.file_system_manager as fsm
 import time
 import requests
 import pika
 import json
 from bson.objectid import ObjectId
+import xml.dom.minidom as xml
 
 from pymongo import MongoClient
 
@@ -19,9 +21,20 @@ def callback(channel, method, properties, body):
     threshold = task_type["steps"][task_step]["min_responses"]
 
     payload = task['xml']
+    tree = xml.parseString(payload).documentElement
+
+    if task["type"]=="0_check_skeleton":
+        node = tree.childNodes[0].cloneNode(deep=True)
+        modified_tree = tree.appendChild(node).parentNode
+        payload = modified_tree.toprettyxml()
+    elif task["type"]=="1_detect_clefs":
+        node = tt.create_element_node("clef", {"shape":"G", "line":"2"})
+        modified_tree = tt.insert_node(tree, [0], node, append=True) # in first measure
+        payload = modified_tree.toprettyxml()
+    
     for i in range(threshold):
         requests.post(f"http://localhost:443/{task['_id']}", data=payload)
-        for j in range(25):
+        for j in range(2):
             connection.process_data_events()
             time.sleep(0.2)
     print(f"Passed through task with ID {task['_id']} as result {threshold} times")
