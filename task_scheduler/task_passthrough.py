@@ -29,12 +29,12 @@ def callback(channel, method, properties, body):
         payload = modified_tree.toprettyxml()
     elif task["type"]=="1_detect_clefs":
         node = tt.create_element_node("clef", {"shape":"G", "line":"2"})
-        modified_tree = tt.insert_node(tree, [0], node, append=True) # in first measure
+        modified_tree = tree.cloneNode(deep=True).appendChild(node.cloneNode(deep=True))
         payload = modified_tree.toprettyxml()
     
     for i in range(threshold):
         requests.post(f"http://localhost:443/{task['_id']}", data=payload)
-        for j in range(2):
+        for j in range(0):
             connection.process_data_events()
             time.sleep(0.2)
     print(f"Passed through task with ID {task['_id']} as result {threshold} times")

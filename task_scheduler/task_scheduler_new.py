@@ -43,6 +43,8 @@ def take_action(channel, method, properties, body):
     for action in actions:
         action(message, channel)
 
+def get_task(task_id, retries=3):
+    return db[cfg.col_task].find_one({"_id": ObjectId(task_id)})
 
 # Status callback handler
 # spec:
@@ -59,6 +61,8 @@ def take_action_on_status(channel, method, properties, body):
     def log_status(message, channel):
         print(f"from {message['module']}: {message}")
     
+    # TODO: rewrite back to if/else again, this is hell for debugging
+    # TODO: split "checks" from "actions", makes code more readable and predictable
     actions = {
         ("api", None)                           :   [
                                                         log_status, 
@@ -98,7 +102,7 @@ def take_action_on_status(channel, method, properties, body):
 
 def check_stage_completion(message, channel):
     task_id = message["_id"]
-    task = db[cfg.col_task].find_one({"_id": ObjectId(task_id)})
+    task = get_task(task_id)
     stage_order = task["stage"]
     score_name = task["score"]
     score = db[cfg.col_score].find_one({"name": score_name})
@@ -135,17 +139,10 @@ def check_stage_completion(message, channel):
             channel
         )
 
-        # Purge all batches and tasks, clean up message history
-        # TODO: Consider whether this is a good idea, potentially we need to clear
-        # more collections, or not clear them at all
-        db[cfg.col_task].drop()
-        db[cfg.col_task_batch].drop()
-        message_history.clear()
-
 # Simply sends a message to the score rebuilder
 def rebuild_score(message, channel):
     task_id = message["_id"]
-    task = db[cfg.col_task].find_one({"_id": ObjectId(task_id)})
+    task = get_task(task_id)
     score_name = task["score"]
     send_message(
         {
@@ -158,7 +155,7 @@ def rebuild_score(message, channel):
 
 def check_task_type_completion(message, channel):
     task_id = message["_id"]
-    task = db[cfg.col_task].find_one({"_id": ObjectId(task_id)})
+    task = get_task(task_id)
     task_type = task_types[task["type"]]
     score_name = task["score"]
     score = db[cfg.col_score].find_one({"name": score_name})
@@ -189,7 +186,7 @@ def check_task_type_completion(message, channel):
 
 def submit_next_batch(message, channel):
     task_id = message["_id"]
-    task = db[cfg.col_task].find_one({"_id": ObjectId(task_id)})
+    task = get_task(task_id)
     task_type = task_types[task["type"]]
     score_name = task["score"]
 
@@ -222,7 +219,7 @@ def submit_batch(batch, channel):
 
 def increment_step(message, channel):
     task_id = message["_id"]    
-    task = db[cfg.col_task].find_one({"_id": ObjectId(task_id)})
+    task = get_task(task_id)
     task_type = task_types[task["type"]]
     current_step = task["step"]
 
@@ -240,7 +237,7 @@ def increment_step(message, channel):
 
 def resubmit(message, channel):
     task_id = message["_id"]    
-    task = db[cfg.col_task].find_one({"_id": ObjectId(task_id)})
+    task = get_task(task_id)
     current_step = task["step"]
 
     if current_step != DONE_STEP:
@@ -261,7 +258,7 @@ def send_to_aggregator(message, channel):
     # - if it equals or exceeds minimum required responses, send a message to jeboi aggregator (either form or xml)
     # - when the aggregator manages to find a good enough aggregation of results, a different message should advance the step for tasks
     task_id = message["_id"]
-    task = db[cfg.col_task].find_one({"_id": ObjectId(task_id)})
+    task = get_task(task_id)
     task_type = task_types[task["type"]]
     step = task["step"]
     result_ids = tuple([x["_id"] for x in db[cfg.col_result].find({"task_id": task_id})])
@@ -294,6 +291,16 @@ def send_to_aggregator(message, channel):
 def initialize_stage(message, channel):
     score_name = message["name"]
     stage = determine_current_stage(score_name)
+
+    # Purge all old batches and tasks, clean up message history
+    #
+    # TODO: Consider whether this is a good idea, potentially we need to clear
+    # more collections, or not clear these at all
+    db[cfg.col_task].drop()
+    db[cfg.col_task_batch].drop()
+    message_history.clear()
+
+    print(f"Initializing stage {stage.order} for score {score_name}")
     create_tasks_and_batches_for_stage(stage, score_name)
     send_first_batches(stage, score_name, channel)
 
