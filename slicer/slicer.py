@@ -4,27 +4,30 @@ import os
 from collections import namedtuple
 from PIL import Image
 
+# TODO: ditch namedtuples and use dataclasses along with json libs for them so we don't need this ugly boilerplate stuff
+
 class NotOnSamePageException(Exception):
     pass
 
-class Slice(namedtuple("ImmutableSlice", ["score", "start", "end", "type", "tuple_size", "same_line", "same_page"])):
+class Slice(namedtuple("ImmutableSlice", ["score", "start", "end", "staff", "type", "tuple_size", "same_line", "same_page"])):
     """
     Class for specifying slices and performing operations on them. It is initialized with a reference to
-    a score instance, a starting measure index, and an ending measure index (exclusive, as in Python).
-    Note that a slice is immutable, this will allow for precomputing certain properties of the measures within
-    without worrying about changes to indices etc.
+    a score instance, a starting measure index, an ending measure index (exclusive, as in Python), and a
+    slice index. Note that a slice is immutable, this will allow for precomputing certain properties of 
+    the measures within without worrying about changes to indices etc.
     """
-    def __new__(clazz, score, start, end, slice_type, tuple_size):
+    def __new__(clazz, score, start, end, staff, slice_type, tuple_size):
         """Doing this allows making additional computed fields immutable as well."""
-        measures = score.measures[start:end]
+        staff_measures = [measure.staffs[staff] for measure in score.measures[start:end]]
         self = super(Slice, clazz).__new__(clazz,
             score,
             start,
             end,
+            staff,
             slice_type,
             tuple_size,
-            all([measures[0].line == x.line for x in measures]),
-            all([measures[0].page == x.page for x in measures]))
+            all([staff_measures[0].line_index == x.line_index for x in staff_measures]),
+            all([staff_measures[0].page_index == x.page_index for x in staff_measures]))
         return self
 
     def get_image(self):
@@ -36,25 +39,25 @@ class Slice(namedtuple("ImmutableSlice", ["score", "start", "end", "type", "tupl
         needed.
         """
 
-        measures = self.get_measures()
-        im = self.score.get_page_image(measures[0].page)
+        staff_measures = self.get_staff_measures()
+        im = self.score.get_page_image(staff_measures[0].page_index)
 
         # If all slices are on same line/page, a simple crop will suffice
         if self.same_page and self.same_line:
-            return im.crop(measures[0].ulc + measures[-1].lrc)
+            return im.crop(staff_measures[0].ulc + staff_measures[-1].lrc)
 
         # Otherwise, if they are just on the same page, put the chosen slices on a blank image, respecting the original positions
         elif self.same_page:
             p_im = Image.new("RGB", (im.width, im.height), (255, 255, 255))
-            for measure in measures:
+            for staff_measure in staff_measures:
                 # Watch out for PIL fail here: if measure.ulc is a list and not a tuple, it will get modified for no apparent reason.
                 # Very likely a bug, as it is undocumented.
-                p_im.paste(im.crop(measure.ulc + measure.lrc), measure.ulc)
+                p_im.paste(im.crop(staff_measure.ulc + staff_measure.lrc), staff_measure.ulc)
 
-            x0 = min(measures, key = lambda x : x.ulc[0]).ulc[0]
-            y0 = min(measures, key = lambda x : x.ulc[1]).ulc[1]
-            x1 = max(measures, key = lambda x : x.ulc[0]).lrc[0]
-            y1 = max(measures, key = lambda x : x.ulc[1]).lrc[1]
+            x0 = min(staff_measures, key = lambda x : x.ulc[0]).ulc[0]
+            y0 = min(staff_measures, key = lambda x : x.ulc[1]).ulc[1]
+            x1 = max(staff_measures, key = lambda x : x.ulc[0]).lrc[0]
+            y1 = max(staff_measures, key = lambda x : x.ulc[1]).lrc[1]
 
             return p_im.crop((x0, y0, x1, y1))
 
@@ -69,11 +72,11 @@ class Slice(namedtuple("ImmutableSlice", ["score", "start", "end", "type", "tupl
         """
         return f"{self.tuple_size}-{self.type}_{self.start}-{self.end}.jpg"
 
-    def get_measures(self):
+    def get_staff_measures(self):
         """
         Gets the slice's measures from the score.
         """
-        return self.score.measures[self.start:self.end]
+        return [measure.staffs[self.staff] for measure in self.score.measures[self.start:self.end]]
 
     def to_db_dict(self):
         """
@@ -84,25 +87,30 @@ class Slice(namedtuple("ImmutableSlice", ["score", "start", "end", "type", "tupl
         "score" : self.score.name,
         "start" : self.start,
         "end" : self.end,
+        "staff" : self.staff,
         "type" : self.type,
         "tuple_size" : self.tuple_size
         }
 
 
 # Convenience classes
-class Measure(namedtuple("Measure", ["ulc", "lrc", "width", "height", "index", "line", "page", "xml", "has_clef"])):
-    """
-    Get a dictionary representation of the object for storage in the database.
-    """
-    def to_db_dict(self):
-        return {
-        "index" : self.index,
-        "line_index" : self.line,
-        "page_index" : self.page,
-        "xml" : self.xml,
-        "has_clef" : self.has_clef
-        }
 
+# class Staff():
+#     """
+#     Get a dictionary representation of the object for storage in the database.
+#     """
+#     def to_db_dict(self):
+#         return {
+#         "index" : self.index,
+#         "measure_index" : self.measure,
+#         "line_index" : self.line,
+#         "page_index" : self.page,
+#         "xml" : self.xml,
+#         "has_clef" : self.has_clef
+#         }
+
+Staff = namedtuple("Staff", ["ulc", "lrc", "width", "height", "index", "measure_index", "line_index", "page_index", "xml", "has_clef"])
+Measure = namedtuple("Measure", ["staffs", "index"])
 Line = namedtuple("Line", ["measures", "start", "index"])
 Page = namedtuple("Page", ["lines", "start", "index", "image_name"])
 
@@ -151,17 +159,22 @@ class Score:
                 page.append(line_obj)
                 del line[:]
             if entry.tagName == "measure":
-                zone = zones[entry.attributes["facs"].value[1:]]
-                ulc = tuple([int(v) for v in (zone.attributes["ulx"].value, zone.attributes["uly"].value)])  # Upper left corner
-                lrc = tuple([int(v) for v in (zone.attributes["lrx"].value, zone.attributes["lry"].value)])  # Lower right corner
+                staffs = []
+                for staff in entry.getElementsByTagName("staff"):
+                    zone = zones[staff.attributes["facs"].value[1:]]
+                    ulc = tuple([int(v) for v in (zone.attributes["ulx"].value, zone.attributes["uly"].value)])  # Upper left corner
+                    lrc = tuple([int(v) for v in (zone.attributes["lrx"].value, zone.attributes["lry"].value)])  # Lower right corner
 
-                has_clef = False
-                # If the line list is empty, this measure is the first measure, and thus contains a clef
-                if not line: 
-                    has_clef = True
+                    has_clef = False
+                    # If the line list is empty, this measure is the first measure, and thus the staff contains a clef
+                    if not line: 
+                        has_clef = True
 
-                inner_xml = entry.toxml()
-                score_measure = Measure(ulc, lrc, lrc[0]-ulc[0], lrc[1]-ulc[1], len(self.measures), len(self.lines), len(self.pages), inner_xml, has_clef)
+                    inner_xml = staff.toxml()
+
+                    score_staff = Staff(ulc, lrc, lrc[0]-ulc[0], lrc[1]-ulc[1], len(staffs), len(self.measures), len(self.lines), len(self.pages), inner_xml, has_clef)
+                    staffs.append(score_staff)
+                score_measure = Measure(staffs, len(self.measures))
                 self.measures.append(score_measure)
                 line.append(score_measure)
 
@@ -176,7 +189,7 @@ class Score:
 
     def _get_n_iterator(self, L, n):
         """
-        Builds a list of `n`-tuples that contain elements from `L` in sequence. 
+        Builds a list of `n`-tuples that contain elements from `L` in sequence.   
 
         Example:
         L = [a, b, c, d]
@@ -190,7 +203,7 @@ class Score:
             Z += [L[i:]]
         return zip(*Z)
 
-    def get_page_slices(self, n=1, start=0, end=None):
+    def get_page_slices(self, n=1, start=0, end=None, staff=0):
         """
         Gets slices that start at the beginning of a page and end at the end of a page.
         By default tuples of single elements are created, adjust `n` to change this.
@@ -199,12 +212,12 @@ class Score:
         iterator = self._get_n_iterator(self.pages[start:end], n)
         slices = []
         for pages in iterator:
-            start = pages[0].lines[0].measures[0].index
-            end = pages[-1].lines[-1].measures[-1].index
-            slices.append(Slice(self, start, end + 1, "pages", n))
+            s = pages[0].lines[0].measures[0].index
+            e = pages[-1].lines[-1].measures[-1].index
+            slices.append(Slice(self, s, e + 1, staff, "pages", n))
         return slices
 
-    def get_line_slices(self, n=1, start=0, end=None):
+    def get_line_slices(self, n=1, start=0, end=None, staff=0):
         """
         Gets slices that start at the beginning of a line and end at the end of a line.
         By default tuples of single elements are created, adjust `n` to change this.
@@ -213,12 +226,12 @@ class Score:
         iterator = self._get_n_iterator(self.lines[start:end], n)
         slices = []
         for lines in iterator:
-            start = lines[0].measures[0].index
-            end = lines[-1].measures[-1].index
-            slices.append(Slice(self, start, end + 1, "lines", n))
+            s = lines[0].measures[0].index
+            e = lines[-1].measures[-1].index
+            slices.append(Slice(self, s, e + 1, staff, "lines", n))
         return slices
 
-    def get_measure_slices(self, n=1, start=0, end=None):
+    def get_measure_slices(self, n=1, start=0, end=None, staff=0):
         """
         Gets slices that start at given measure index.
         By default tuples of single elements are created, adjust `n` to change this.
@@ -227,18 +240,23 @@ class Score:
         iterator = self._get_n_iterator(self.measures[start:end], n)
         slices = []
         for measures in iterator:
-            start = measures[0].index
-            end = measures[-1].index
-            slices.append(Slice(self, start, end + 1, "measures", n))
+            s = measures[0].index
+            e = measures[-1].index
+            slices.append(Slice(self, s, e + 1, staff, "measures", n))
         return slices
 
+    
     def to_db_dict(self):
         """
         Get a dictionary representation of the object for storage in the database.
         """
-        score_dict = {
-        "name" : self.name,
-        "measures": [dict(measure.to_db_dict()) for measure in self.measures]
-        }
 
-        return score_dict
+        measures = []
+        for measure in self.measures:
+            staffs = [staff._asdict() for staff in measure.staffs]
+            measures.append(Measure(staffs, measure.index)._asdict())
+            
+        return {
+        "name" : self.name,
+        "measures": measures
+        }

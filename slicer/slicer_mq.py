@@ -31,25 +31,29 @@ def callback(ch, method, properties, body):
     line_path = out_path / "lines" 
     double_measure_path = out_path / "double_measures"
 
-    slice_paths_lists = {
-        measure_path            : score.get_measure_slices(),
-        double_measure_path     : score.get_measure_slices(2),
-        line_path               : score.get_line_slices()
-    }
-
     client = MongoClient(cfg.mongodb_address.ip, cfg.mongodb_address.port)
     db = client[cfg.db_name]
 
     # First clear all documents under this score name (which acts as key in our case)
     db[cfg.col_slice].delete_many({"score": score.name})
 
-    for slice_path, slice_list in slice_paths_lists.items():
-        pathlib.Path(slice_path).mkdir(parents=True, exist_ok=True)
-        for score_slice in slice_list:
-            if score_slice.same_page:
-                score_slice.get_image().save(str(slice_path / score_slice.get_name()))
-                slice_res = db[cfg.col_slice].insert_one(score_slice.to_db_dict())
-                print(f"added entry {slice_res.inserted_id} to slices collection")
+    # determine staff count from first measure
+    staffs = len(score.measures[0].staffs)
+
+    for index in range(staffs):
+        slice_paths_lists = {
+            measure_path            : score.get_measure_slices(staff=index),
+            double_measure_path     : score.get_measure_slices(2, staff=index),
+            line_path               : score.get_line_slices(staff=index)
+        }
+
+        for slice_path, slice_list in slice_paths_lists.items():
+            pathlib.Path(slice_path).mkdir(parents=True, exist_ok=True)
+            for score_slice in slice_list:
+                if score_slice.same_page:
+                    score_slice.get_image().save(str(slice_path / score_slice.get_name()))
+                    slice_res = db[cfg.col_slice].insert_one(score_slice.to_db_dict())
+                    print(f"added entry {slice_res.inserted_id} to slices collection")
 
     channel.queue_declare(queue=cfg.mq_omr_planner_status)
 
