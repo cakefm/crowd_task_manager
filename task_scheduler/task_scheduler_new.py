@@ -12,9 +12,15 @@ from shutil import copyfile
 from task_type import TaskType, Stage
 from task_type import DONE_STEP
 
-def getXMLofSlice(score_name, begin, end):
+def getXMLofSlice(measure_slice):
+    score_name = measure_slice["score"]
+    start = measure_slice['start']
+    end = measure_slice['end']
+    staff = measure_slice['staff']
+
     score = db[cfg.col_score].find_one({"name": score_name})
-    merged = "\n".join([m["xml"] for m in score["measures"][begin:end]])
+    merged = "\n".join([m["staffs"][staff]["xml"] for m in score["measures"][start:end]])
+    
     return f"<placeholderroot>{merged}</placeholderroot>"
 
 def send_message(message, queue, channel):
@@ -322,7 +328,7 @@ def create_tasks_and_batches_for_stage(stage, score_name):
                 'image_path': slice_location,
                 'step_submission': step_submission,
                 'step': first_step,
-                'xml': getXMLofSlice(measure_slice['score'], measure_slice['start'], measure_slice['end']),
+                'xml': getXMLofSlice(measure_slice),
                 'responses_needed': task_type.steps[first_step]["min_responses"],
                 'batch_id': None, # Gets assigned later,
                 'stage': stage.order
