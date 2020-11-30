@@ -7,12 +7,11 @@ from common.settings import cfg
 import common.file_system_manager as fsm
 import common.tree_tools as tt
 import xml.dom.minidom as xml
+from bson.objectid import ObjectId
 
 from pymongo import MongoClient
 
-# TODO: It's better to make the score rebuilder "stupid", as in, it should rebuild 
-# the entire score from scratch from the data in the db. This way it can be triggered in a
-# rather generic way, at any point in the pipeline
+# Score rebuilder should always re-index, and rely on the measure order instead of the n./label-attribute
 def callback(ch, method, properties, body):
     data = json.loads(body)
     sheet_name = data['name']
@@ -21,21 +20,49 @@ def callback(ch, method, properties, body):
     client = MongoClient(cfg.mongodb_address.ip, cfg.mongodb_address.port)
     db = client[cfg.db_name]
 
-    # Obtain aggregated XML
-    aggregated_result = db[cfg.col_aggregated_result].find_one({"task_id" : task_id})
-    aggregated_xml = xml.parseString("<mei>" + aggregated_result["xml"] + "</mei>")
-    aggregated_dict = {x.attributes["n"].value:x for x in aggregated_xml.getElementsByTagName("measure")}
-
     # Get MEI file and measures
     mei_path = fsm.get_sheet_whole_directory(sheet_name) / "aligned.mei"
     mei_xml = xml.parse(str(mei_path))
     mei_measures = mei_xml.getElementsByTagName("measure")
 
-    # Replace measures with new info
-    for measure in mei_measures:
-        mei_n = measure.attributes["n"].value
-        if mei_n in aggregated_dict:
-            tt.replace_child_nodes(measure, aggregated_dict[mei_n].childNodes)
+    # Obtain corresponding task and slice
+    task = db[cfg.col_task].find_one({"_id" : ObjectId(task_id)})
+    measure_staff_slice = db[cfg.col_slice].find_one({"_id" : ObjectId(task["slice_id"])})
+    slice_measures = mei_measures[measure_staff_slice["start"]: measure_staff_slice["end"]]
+
+    # Get aggregated XML
+    aggregated_result = db[cfg.col_aggregated_result].find_one({"task_id" : task_id})
+    aggregated_xml = xml.parseString(aggregated_result["xml"]).documentElement
+    aggregated_measures = aggregated_xml.getElementsByTagName("measure")
+
+    # Apply the changes
+
+    # Perform all skeletal modifications in stage 0
+    if task["stage"]==0:
+        # Adjust measure skeleton
+        if len(aggregated_measures) > len(slice_measures):
+            for measure in aggregated_measures[len(slice_measures):]:
+                mei_measures[0].parentNode.insertBefore(measure, slice_measures[-1].nextSibling)
+
+        # TODO: Adjust staff skeleton
+        # ...
+
+        # TODO: Adjust facsimile values
+        # ...
+
+        # Re-enumerate
+        for index, measure in enumerate(mei_measures):
+            measure.setAttribute("n", str(index))
+            measure.setAttribute("label", str(index))
+
+
+    # Perform non-skeletal modifications in any other stage
+    else:
+        for measure_original, measure_agg in zip(slice_measures, aggregated_measures):
+            staffs_original = measure_original.getElementsByTagName("staff")[measure_staff_slice["staff_start"]: measure_staff_slice["staff_end"]]
+            staffs_aggregated = measure_agg.getElementsByTagName("staff")
+            for staff_original, staff_aggregated in zip(staffs_original, staffs_aggregated):
+                tt.replace_child_nodes(staff_original, staff_aggregated.childNodes)
 
     # Write MEI file
     with open(str(mei_path), 'w') as mei_file:
