@@ -46,6 +46,7 @@ mq_task_scheduler: "task_scheduler_queue"
 mq_task_scheduler_status: "task_scheduler_status_queue"
 mq_ce_communicator: "ce_communicator_queue"
 mq_aligner: "aligner_queue"
+mq_form_processor: "form_processor_queue"
 
 # Paths
 upload_folder|path: "/omr_files/"

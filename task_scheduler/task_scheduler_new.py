@@ -88,10 +88,6 @@ def take_action_on_status(channel, method, properties, body):
                                                         log_status, 
                                                         resubmit
                                                     ],
-        ("aggregator_form", "complete")         :   [
-                                                        log_status, 
-                                                        rebuild_score
-                                                    ],
         ("score_rebuilder", "complete")         :   [
                                                         log_status,
                                                         increment_step,
@@ -100,10 +96,27 @@ def take_action_on_status(channel, method, properties, body):
                                                         check_task_type_completion,
                                                         check_stage_completion
                                                     ],
+        ("aggregator_form", "complete")         :   [
+                                                        log_status, 
+                                                        process_form_output
+                                                    ],
         ("aggregator_form", "failed")           :   [
                                                         log_status, 
                                                         resubmit
-                                                    ]
+                                                    ],
+        ("form_processor", "complete")         :    [
+                                                        log_status,
+                                                        increment_step,
+                                                        resubmit,
+                                                        submit_next_batch,
+                                                        check_task_type_completion,
+                                                        check_stage_completion
+                                                    ],
+        ("form_processor", "failed")           :    [
+                                                        log_status,
+                                                        decrement_step,
+                                                        resubmit
+                                                    ]             
     }[(module, status)]
 
     for action in actions:
@@ -162,7 +175,22 @@ def rebuild_score(message, channel):
         },
         cfg.mq_score_rebuilder,
         channel
-    )        
+    )
+
+
+# Simply sends a message to the form processor
+def process_form_output(message, channel):
+    task_id = message["_id"]
+    task = get_task(task_id)
+    score_name = task["score"]
+    send_message(
+        {
+            'task_id': message["_id"],
+            'name': score_name
+        },
+        cfg.mq_form_processor,
+        channel
+    )            
 
 def check_task_type_completion(message, channel):
     task_id = message["_id"]
@@ -226,7 +254,25 @@ def submit_batch(batch, channel):
             cfg.mq_ce_communicator,
             channel
         )
-    
+
+# TODO: should generalize this eventually, to be able to go to any step by name
+def decrement_step(message, channel):
+    task_id = message["_id"]    
+    task = get_task(task_id)
+    task_type = task_types[task["type"]]
+    current_step = task["step"]
+
+    iterator = iter(reversed(task_type.steps))
+    for step in iterator:
+        if step == current_step:
+            break
+    try:
+        previous_step = next(iterator)
+    except StopIteration:
+        previous_step = task_type.steps[0]
+
+    print(f"Decrementing step from {current_step} to {previous_step} for task {task_id}")
+    db[cfg.col_task].update_one({"_id": ObjectId(task_id)}, {"$set": {"step": previous_step}})
 
 def increment_step(message, channel):
     task_id = message["_id"]    

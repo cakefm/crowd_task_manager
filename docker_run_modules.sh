@@ -92,10 +92,17 @@ fi
 
 
 if ! screen -list | grep -q "score_rebuilder"; then
-    echo 'starting score_rebuilder'
+    echo 'starting score rebuilder'
     cd $HOME/crowd-task-manager/score_rebuilder
     screen -L -Logfile screen_log -dm -S score_rebuilder python3 score_rebuilder_mq.py
 fi
+
+if ! screen -list | grep -q "form_processor"; then
+    echo 'starting form processor'
+    cd $HOME/crowd-task-manager/form_processor
+    screen -L -Logfile screen_log -dm -S form_processor python3 form_processor_mq.py
+fi
+
 
 # if ! screen -list | grep -q "github_init"; then
 #     echo 'starting github_init'
