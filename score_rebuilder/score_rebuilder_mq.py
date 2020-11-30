@@ -32,7 +32,7 @@ def callback(ch, method, properties, body):
 
     # Get aggregated XML
     aggregated_result = db[cfg.col_aggregated_result].find_one({"task_id" : task_id})
-    aggregated_xml = xml.parseString(aggregated_result["xml"]).documentElement
+    aggregated_xml = xml.parseString(aggregated_result["result"]).documentElement
     aggregated_measures = aggregated_xml.getElementsByTagName("measure")
 
     # Apply the changes
