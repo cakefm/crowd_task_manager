@@ -27,13 +27,15 @@ def callback(channel, method, properties, body):
         node = tree.getElementsByTagName("measure")[-1].cloneNode(deep=True)
         modified_tree = tree.appendChild(node).parentNode
         payload = modified_tree.toprettyxml()
-    elif task["type"] in ["1_detect_clefs", "1_detect_more_clefs"] :
+    elif task["type"]=="1_detect_clefs" and task["step"]=="edit":
         node = tt.create_element_node("clef", {"shape":"G", "line":"2"})
         modified_tree = tree.cloneNode(deep=True)
-        # Puts a cleff in every measure of the slice, though these slices only have one measureS
+        # Puts a cleff in every measure of the slice, though these slices only have one measure
         for staff in modified_tree.getElementsByTagName("staff"):
             staff.appendChild(node.cloneNode(deep=True))
         payload = modified_tree.toprettyxml()
+    elif task["type"]=="1_detect_clefs" and task["step"]=="verify":
+        payload = json.dumps({"verify": True})
     
     for i in range(threshold):
         requests.post(f"http://localhost:443/{task['_id']}", data=payload)
