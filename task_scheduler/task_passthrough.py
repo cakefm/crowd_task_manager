@@ -7,6 +7,7 @@ import time
 import requests
 import pika
 import json
+import numpy as np
 from bson.objectid import ObjectId
 import xml.dom.minidom as xml
 
@@ -35,7 +36,7 @@ def callback(channel, method, properties, body):
             staff.appendChild(node.cloneNode(deep=True))
         payload = modified_tree.toprettyxml()
     elif task["type"]=="1_detect_clefs" and task["step"]=="verify":
-        payload = json.dumps({"verify": [True]})
+        payload = json.dumps({"verify": [np.random.random() < 0.8]})
     
     for i in range(threshold):
         requests.post(f"http://localhost:443/{task['_id']}", data=payload)
