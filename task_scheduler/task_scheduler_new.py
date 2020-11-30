@@ -70,7 +70,6 @@ def take_action_on_status(channel, method, properties, body):
                                                     ],
         ("aggregator_xml",  "complete")         :   [
                                                         log_status, 
-                                                        increment_step,
                                                         rebuild_score
                                                     ],
         ("aggregator_xml",  "failed")           :   [
@@ -79,11 +78,11 @@ def take_action_on_status(channel, method, properties, body):
                                                     ],
         ("aggregator_form", "complete")         :   [
                                                         log_status, 
-                                                        increment_step,
                                                         rebuild_score
                                                     ],
         ("score_rebuilder", "complete")         :   [
                                                         log_status,
+                                                        increment_step,
                                                         resubmit,
                                                         submit_next_batch,
                                                         check_task_type_completion,
