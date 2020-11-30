@@ -189,13 +189,14 @@ def main():
                         json.dumps({
                             '_id': score_status['_id'],
                             'name': score_status['name']}))
+                    continue
                 if score_status['module'] == 'task_scheduler' and 'task_type' in score_status:
+                    # Here we should let the CE know some task type has been completed
                     task_type = score_status['task_type']
                     print(f"Completed {task_type} for score {score_name}")
-
-                    # Here we should let the CE know some task type has been completed
-
                     continue
+
+
                 if score_status['module'] == 'github_init':
                     # communicate to ce that github repo has been initiated
                     continue
@@ -203,23 +204,6 @@ def main():
                     # communicate with ce that github repo has been updated
                     continue
 
-                # TODO: Now that the score rebuilder is in the task loop, we might want
-                # to have github update in there as well. We can have it accumulate commits
-                # for every task, and then push when some batch has finished, via specific
-                # messages
-                if score_status['module'] == 'score_rebuilder':
-                    # send message to github update?
-                    print(
-                        datetime.now(),
-                        'sending ',
-                        score_status['name'], 'to github_update')
-                    send_message(
-                        cfg.mq_github,
-                        cfg.mq_github,
-                        json.dumps({
-                            'task_id': score_status['task_id'],
-                            'name': score_status['name']}))
-                    continue
     except KeyboardInterrupt:
         print('INTERRUPTED!')
 

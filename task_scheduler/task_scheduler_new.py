@@ -82,7 +82,8 @@ def take_action_on_status(channel, method, properties, body):
                                                     ],
         ("aggregator_xml",  "complete")         :   [
                                                         log_status, 
-                                                        rebuild_score
+                                                        rebuild_score,
+                                                        update_task_xml
                                                     ],
         ("aggregator_xml",  "failed")           :   [
                                                         log_status, 
@@ -90,11 +91,9 @@ def take_action_on_status(channel, method, properties, body):
                                                     ],
         ("score_rebuilder", "complete")         :   [
                                                         log_status,
+                                                        github_commit,
                                                         increment_step,
-                                                        resubmit,
-                                                        submit_next_batch,
-                                                        check_task_type_completion,
-                                                        check_stage_completion
+                                                        resubmit
                                                     ],
         ("aggregator_form", "complete")         :   [
                                                         log_status, 
@@ -107,22 +106,58 @@ def take_action_on_status(channel, method, properties, body):
         ("form_processor", "complete")         :    [
                                                         log_status,
                                                         increment_step,
-                                                        resubmit,
-                                                        submit_next_batch,
-                                                        check_task_type_completion,
-                                                        check_stage_completion
+                                                        resubmit
                                                     ],
         ("form_processor", "failed")           :    [
                                                         log_status,
-                                                        invalidate_all_results,
+                                                        invalidate_task_results,
                                                         decrement_step,
+                                                        update_task_xml,
                                                         resubmit
-                                                    ]             
+                                                    ],
+        ("task_scheduler", "complete")         :    [
+                                                        log_status,
+                                                        submit_next_batch,
+                                                        check_task_type_completion,
+                                                        check_stage_completion
+                                                    ]
     }[(module, status)]
 
     for action in actions:
         # print(f"Executing {action} triggered by {message}")
         action(message, channel)
+
+
+def github_commit(message, channel):
+    task_id = message["_id"]
+    task = get_task(task_id)
+    score_name = task["score"]
+    send_message(
+        {
+            'task_id': task_id,
+            'action': 'commit',
+            'name': score_name
+        },
+        cfg.mq_github,
+        channel
+    )
+
+def update_task_xml(message, channel):
+    task_id = message["_id"]
+    task = get_task(task_id)
+    step = task["step"]
+
+    # Should retrieve XML since it only gets called when the task is still in the edit step
+    current_result = db[cfg.col_aggregated_result].find_one({"task_id": task_id, "step": step})
+    if current_result:
+        print(f"Updating task {task_id} XML with currently aggregated result from step {step}")
+        new_xml = current_result['result']
+    else:
+        print(f"No aggregated result found, resetting to initial XML")
+        new_xml = task["initial_xml"]
+
+    db[cfg.col_task].update_one({"_id": ObjectId(task_id)}, {"$set": {"xml": new_xml}})
+
 
 
 def check_stage_completion(message, channel):
@@ -223,7 +258,6 @@ def check_task_type_completion(message, channel):
 
 
 
-
 def submit_next_batch(message, channel):
     task_id = message["_id"]
     task = get_task(task_id)
@@ -235,6 +269,16 @@ def submit_next_batch(message, channel):
     tasks = list(db[cfg.col_task].find({'_id': {"$in": task_ids}}))
 
     if all([t["step"] == DONE_STEP for t in tasks]):
+        # Push per completed batch
+        send_message(
+            {
+                'task_id': task_id,
+                'action': 'push',
+                'name': score_name
+            },
+            cfg.mq_github,
+            channel
+        )
         priority = batch["priority"]
         key = {
                 "priority": { "$gt": priority},
@@ -257,11 +301,10 @@ def submit_batch(batch, channel):
         )
 
 
-def invalidate_all_results(message, channel):
+def invalidate_task_results(message, channel):
     task_id = message["_id"]    
     db[cfg.col_result].delete_many({"task_id": task_id})
-
-
+    db[cfg.col_aggregated_result].delete_many({"task_id": task_id})
 
 # TODO: should generalize this eventually, to be able to go to any step by name
 def decrement_step(message, channel):
@@ -300,6 +343,7 @@ def increment_step(message, channel):
     print(f"Advancing step from {current_step} to {next_step} for task {task_id}")
     db[cfg.col_task].update_one({"_id": ObjectId(task_id)}, {"$set": {"step": next_step}})
 
+
 def resubmit(message, channel):
     task_id = message["_id"]    
     task = get_task(task_id)
@@ -313,7 +357,18 @@ def resubmit(message, channel):
             channel
         )
     else:
-        print(f"Task {task_id} already done, no need to resubmit")
+        # A bit weird, but this is the most convenient solution: send a message to ourselves!
+        print(f"Task {task_id} already done, no need to resubmit, notifying task scheduler..")
+        send_message(
+            {
+                '_id': task_id,
+                'module': 'task_scheduler',
+                'status': 'complete'
+            },
+            cfg.mq_task_scheduler_status,
+            channel
+        )
+
 
 
 def send_to_aggregator(message, channel):
@@ -391,7 +446,7 @@ def create_tasks_and_batches_for_stage(stage, score_name):
             copy_destination = str(fsm.get_sheet_api_directory(measure_slice['score'], slice_type=task_type.slice_type) / measure_slice['name'])
             first_step = next(iter(task_type.steps.keys()))
             step_submission = {s: False for s in task_type.steps.keys()}
-
+            xml = getXMLofSlice(measure_slice)
             task = {
                 'name': measure_slice['name'],
                 'type': task_type.name,
@@ -400,7 +455,8 @@ def create_tasks_and_batches_for_stage(stage, score_name):
                 'image_path': slice_location,
                 'step_submission': step_submission,
                 'step': first_step,
-                'xml': getXMLofSlice(measure_slice),
+                'initial_xml': xml,
+                'xml': xml,
                 'responses_needed': task_type.steps[first_step]["min_responses"],
                 'batch_id': None, # Gets assigned later,
                 'stage': stage.order
