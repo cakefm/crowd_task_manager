@@ -24,12 +24,15 @@ def callback(channel, method, properties, body):
     tree = xml.parseString(payload).documentElement
 
     if task["type"]=="0_check_skeleton":
-        node = tree.childNodes[0].cloneNode(deep=True)
+        node = tree.getElementsByTagName("measure")[-1].cloneNode(deep=True)
         modified_tree = tree.appendChild(node).parentNode
         payload = modified_tree.toprettyxml()
-    elif task["type"]=="1_detect_clefs":
+    elif task["type"] in ["1_detect_clefs", "1_detect_more_clefs"] :
         node = tt.create_element_node("clef", {"shape":"G", "line":"2"})
-        modified_tree = tree.cloneNode(deep=True).appendChild(node.cloneNode(deep=True))
+        modified_tree = tree.cloneNode(deep=True)
+        # Puts a cleff in every measure of the slice, though these slices only have one measureS
+        for staff in modified_tree.getElementsByTagName("staff"):
+            staff.appendChild(node.cloneNode(deep=True))
         payload = modified_tree.toprettyxml()
     
     for i in range(threshold):
