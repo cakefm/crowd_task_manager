@@ -31,7 +31,7 @@ def callback(ch, method, properties, body):
     slice_measures = mei_measures[measure_staff_slice["start"]: measure_staff_slice["end"]]
 
     # Get aggregated XML
-    aggregated_result = db[cfg.col_aggregated_result].find_one({"task_id" : task_id})
+    aggregated_result = db[cfg.col_aggregated_result].find_one({"task_id" : task_id, "step": task["step"]})
     aggregated_xml = xml.parseString(aggregated_result["result"]).documentElement
     aggregated_measures = aggregated_xml.getElementsByTagName("measure")
 
