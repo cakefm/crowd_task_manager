@@ -35,7 +35,7 @@ def callback(channel, method, properties, body):
             staff.appendChild(node.cloneNode(deep=True))
         payload = modified_tree.toprettyxml()
     elif task["type"]=="1_detect_clefs" and task["step"]=="verify":
-        payload = json.dumps({"verify": True})
+        payload = json.dumps({"verify": [True]})
     
     for i in range(threshold):
         requests.post(f"http://localhost:443/{task['_id']}", data=payload)
