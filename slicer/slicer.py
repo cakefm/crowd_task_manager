@@ -4,26 +4,35 @@ import os
 from collections import namedtuple
 from PIL import Image
 
+import sys
+sys.path.append("..")
+from common.settings import cfg
+import common.file_system_manager as fsm
+
 # TODO: ditch namedtuples and use dataclasses along with json libs for them so we don't need this ugly boilerplate stuff
 
 class NotOnSamePageException(Exception):
     pass
 
-class Slice(namedtuple("ImmutableSlice", ["score", "start", "end", "staff", "type", "tuple_size", "same_line", "same_page"])):
+# TODO: we need "staff_start" and "staff_end" support
+class Slice(namedtuple("ImmutableSlice", ["score", "start", "end", "staff_start", "staff_end", "type", "tuple_size", "same_line", "same_page"])):
     """
     Class for specifying slices and performing operations on them. It is initialized with a reference to
     a score instance, a starting measure index, an ending measure index (exclusive, as in Python), and a
     slice index. Note that a slice is immutable, this will allow for precomputing certain properties of 
     the measures within without worrying about changes to indices etc.
     """
-    def __new__(clazz, score, start, end, staff, slice_type, tuple_size):
+    def __new__(clazz, score, start, end, staff_start, staff_end, slice_type, tuple_size):
         """Doing this allows making additional computed fields immutable as well."""
-        staff_measures = [measure.staffs[staff] for measure in score.measures[start:end]]
+        if not staff_end:
+            staff_end = len(score.measures[0].staffs)
+        staff_measures = [measure.staffs[staff_start] for measure in score.measures[start:end]]
         self = super(Slice, clazz).__new__(clazz,
             score,
             start,
             end,
-            staff,
+            staff_start,
+            staff_end,
             slice_type,
             tuple_size,
             all([staff_measures[0].line_index == x.line_index for x in staff_measures]),
@@ -39,25 +48,26 @@ class Slice(namedtuple("ImmutableSlice", ["score", "start", "end", "staff", "typ
         needed.
         """
 
-        staff_measures = self.get_staff_measures()
-        im = self.score.get_page_image(staff_measures[0].page_index)
+        measures = self.get_measures()
+        im = self.score.get_page_image(measures[0].staffs[0].page_index)
 
         # If all slices are on same line/page, a simple crop will suffice
         if self.same_page and self.same_line:
-            return im.crop(staff_measures[0].ulc + staff_measures[-1].lrc)
+            return im.crop(measures[0].staffs[self.staff_start].ulc + measures[-1].staffs[self.staff_end-1].lrc)
 
         # Otherwise, if they are just on the same page, put the chosen slices on a blank image, respecting the original positions
+        # TODO: im.width should instead be the combined width of all measures
         elif self.same_page:
             p_im = Image.new("RGB", (im.width, im.height), (255, 255, 255))
-            for staff_measure in staff_measures:
+            for measure in measures:
                 # Watch out for PIL fail here: if measure.ulc is a list and not a tuple, it will get modified for no apparent reason.
                 # Very likely a bug, as it is undocumented.
-                p_im.paste(im.crop(staff_measure.ulc + staff_measure.lrc), staff_measure.ulc)
+                p_im.paste(im.crop(measure.staffs[self.staff_start].ulc + measure.staffs[self.staff_end-1].lrc), measure.staffs[self.staff_start].ulc)
 
-            x0 = min(staff_measures, key = lambda x : x.ulc[0]).ulc[0]
-            y0 = min(staff_measures, key = lambda x : x.ulc[1]).ulc[1]
-            x1 = max(staff_measures, key = lambda x : x.ulc[0]).lrc[0]
-            y1 = max(staff_measures, key = lambda x : x.ulc[1]).lrc[1]
+            x0 = min(measure, key = lambda x : x.staffs[self.staff_start].ulc[0]).staffs[self.staff_start].ulc[0]
+            y0 = min(measure, key = lambda x : x.staffs[self.staff_start].ulc[1]).staffs[self.staff_start].ulc[1]
+            x1 = max(measure, key = lambda x : x.staffs[self.staff_start].ulc[0]).staffs[self.staff_end-1].lrc[0]
+            y1 = max(measure, key = lambda x : x.staffs[self.staff_start].ulc[1]).staffs[self.staff_end-1].lrc[1]
 
             return p_im.crop((x0, y0, x1, y1))
 
@@ -67,16 +77,15 @@ class Slice(namedtuple("ImmutableSlice", ["score", "start", "end", "staff", "typ
 
     def get_name(self):
         """
-        Creates a name based on the properties of the slice. slice_type can optionally be given to customize the
-        name further based on the specifics on the slice being made.
+        Creates a name based on the properties of the slice.
         """
-        return f"{self.tuple_size}-{self.type}_{self.start}-{self.end}.jpg"
+        return f"{self.tuple_size}-{self.type}_m{self.start}-{self.end}_s{self.staff_start}-{self.staff_end}.jpg"
 
-    def get_staff_measures(self):
+    def get_measures(self):
         """
         Gets the slice's measures from the score.
         """
-        return [measure.staffs[self.staff] for measure in self.score.measures[self.start:self.end]]
+        return self.score.measures[self.start:self.end]
 
     def to_db_dict(self):
         """
@@ -87,7 +96,8 @@ class Slice(namedtuple("ImmutableSlice", ["score", "start", "end", "staff", "typ
         "score" : self.score.name,
         "start" : self.start,
         "end" : self.end,
-        "staff" : self.staff,
+        "staff_start" : self.staff_start,
+        "staff_end" : self.staff_end,
         "type" : self.type,
         "tuple_size" : self.tuple_size
         }
@@ -110,7 +120,7 @@ class Slice(namedtuple("ImmutableSlice", ["score", "start", "end", "staff", "typ
 #         }
 
 Staff = namedtuple("Staff", ["ulc", "lrc", "width", "height", "index", "measure_index", "line_index", "page_index", "xml", "has_clef"])
-Measure = namedtuple("Measure", ["staffs", "index"])
+Measure = namedtuple("Measure", ["staffs", "index", "xml"])
 Line = namedtuple("Line", ["measures", "start", "index"])
 Page = namedtuple("Page", ["lines", "start", "index", "image_name"])
 
@@ -121,11 +131,11 @@ class Score:
     - The lines with the measures
     - The pages with the lines and page image paths
     """
-    def __init__(self, path):
+    def __init__(self, name):
         # Create all relevant paths and names
-        mei_path = f"{path}{os.path.sep}whole{os.path.sep}aligned.mei"
-        self.pages_path = f"{path}{os.path.sep}pages{os.path.sep}"
-        self.name = os.path.basename(os.path.normpath(path))
+        mei_path = fsm.get_sheet_whole_directory(name) / "aligned.mei"
+        self.pages_path = fsm.get_sheet_pages_directory(name)
+        self.name = name
 
         # Data structures
         self.measures = []
@@ -134,7 +144,7 @@ class Score:
         self.images = {}
 
         # MEI parsing
-        self.mei = xml.parse(mei_path)
+        self.mei = xml.parse(str(mei_path))
 
         # Storing the zones in a dict and collect page images
         image_names = []
@@ -174,7 +184,7 @@ class Score:
 
                     score_staff = Staff(ulc, lrc, lrc[0]-ulc[0], lrc[1]-ulc[1], len(staffs), len(self.measures), len(self.lines), len(self.pages), inner_xml, has_clef)
                     staffs.append(score_staff)
-                score_measure = Measure(staffs, len(self.measures))
+                score_measure = Measure(staffs, len(self.measures), entry.toxml())
                 self.measures.append(score_measure)
                 line.append(score_measure)
 
@@ -184,7 +194,7 @@ class Score:
         """
         image_name = self.pages[page_index].image_name
         if image_name not in self.images:
-            self.images[image_name] = Image.open(f"{self.pages_path}{os.path.sep}{image_name}")
+            self.images[image_name] = Image.open(str(self.pages_path / image_name))
         return self.images[image_name]
 
     def _get_n_iterator(self, L, n):
@@ -203,7 +213,7 @@ class Score:
             Z += [L[i:]]
         return zip(*Z)
 
-    def get_page_slices(self, n=1, start=0, end=None, staff=0):
+    def get_page_slices(self, n=1, start=0, end=None, staff_start=0, staff_end=None):
         """
         Gets slices that start at the beginning of a page and end at the end of a page.
         By default tuples of single elements are created, adjust `n` to change this.
@@ -214,10 +224,10 @@ class Score:
         for pages in iterator:
             s = pages[0].lines[0].measures[0].index
             e = pages[-1].lines[-1].measures[-1].index
-            slices.append(Slice(self, s, e + 1, staff, "pages", n))
+            slices.append(Slice(self, s, e + 1, staff_start, staff_end, "pages", n))
         return slices
 
-    def get_line_slices(self, n=1, start=0, end=None, staff=0):
+    def get_line_slices(self, n=1, start=0, end=None, staff_start=0, staff_end=None):
         """
         Gets slices that start at the beginning of a line and end at the end of a line.
         By default tuples of single elements are created, adjust `n` to change this.
@@ -228,10 +238,10 @@ class Score:
         for lines in iterator:
             s = lines[0].measures[0].index
             e = lines[-1].measures[-1].index
-            slices.append(Slice(self, s, e + 1, staff, "lines", n))
+            slices.append(Slice(self, s, e + 1, staff_start, staff_end, "lines", n))
         return slices
 
-    def get_measure_slices(self, n=1, start=0, end=None, staff=0):
+    def get_measure_slices(self, n=1, start=0, end=None, staff_start=0, staff_end=None):
         """
         Gets slices that start at given measure index.
         By default tuples of single elements are created, adjust `n` to change this.
@@ -242,7 +252,7 @@ class Score:
         for measures in iterator:
             s = measures[0].index
             e = measures[-1].index
-            slices.append(Slice(self, s, e + 1, staff, "measures", n))
+            slices.append(Slice(self, s, e + 1, staff_start, staff_end, "measures", n))
         return slices
 
     
@@ -254,7 +264,7 @@ class Score:
         measures = []
         for measure in self.measures:
             staffs = [staff._asdict() for staff in measure.staffs]
-            measures.append(Measure(staffs, measure.index)._asdict())
+            measures.append(Measure(staffs, measure.index, measure.xml)._asdict())
             
         return {
         "name" : self.name,

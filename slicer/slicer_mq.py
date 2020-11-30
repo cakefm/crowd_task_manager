@@ -22,9 +22,7 @@ def callback(ch, method, properties, body):
     name = data['name']
 
     print(f"Processing score {name}")
-
-    path = fsm.get_sheet_base_directory(name)
-    score = Score(str(path))
+    score = Score(name)
 
     out_path = fsm.get_sheet_slices_directory(name)
     measure_path = out_path / "measures"
@@ -38,16 +36,16 @@ def callback(ch, method, properties, body):
     db[cfg.col_slice].delete_many({"score": score.name})
 
     # determine staff count from first measure
-    staffs = len(score.measures[0].staffs)
+    staffs = range(len(score.measures[0].staffs))
 
-    for index in range(staffs):
-        slice_paths_lists = {
-            measure_path            : score.get_measure_slices(staff=index),
-            double_measure_path     : score.get_measure_slices(2, staff=index),
-            line_path               : score.get_line_slices(staff=index)
-        }
 
-        for slice_path, slice_list in slice_paths_lists.items():
+    slice_paths_lists = {
+        measure_path            : [score.get_measure_slices(staff_start=index, staff_end=index+1) for index in staffs],
+        line_path               : [score.get_line_slices()]
+    }
+
+    for slice_path, slice_list_list in slice_paths_lists.items():
+        for slice_list in slice_list_list:
             pathlib.Path(slice_path).mkdir(parents=True, exist_ok=True)
             for score_slice in slice_list:
                 if score_slice.same_page:
