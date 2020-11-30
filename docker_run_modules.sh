@@ -78,11 +78,18 @@ if ! screen -list | grep -q "task_scheduler"; then
     screen -L -Logfile screen_log -L -Logfile screen_log -dm -S task_scheduler python3 task_scheduler_new.py
 fi
 
-if ! screen -list | grep -q "aggregator"; then
-    echo 'starting aggregator'
+if ! screen -list | grep -q "aggregator_xml"; then
+    echo 'starting xml aggregator'
     cd $HOME/crowd-task-manager/aggregator
-    screen -L -Logfile screen_log -dm -S aggregator python3 aggregator_xml_mq.py
+    screen -L -Logfile screen_log_xml -dm -S aggregator_xml python3 aggregator_xml_mq.py
 fi
+
+if ! screen -list | grep -q "aggregator_form"; then
+    echo 'starting form aggregator'
+    cd $HOME/crowd-task-manager/aggregator
+    screen -L -Logfile screen_log_form -dm -S aggregator_form python3 aggregator_form_mq.py
+fi
+
 
 if ! screen -list | grep -q "score_rebuilder"; then
     echo 'starting score_rebuilder'
