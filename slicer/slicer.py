@@ -8,6 +8,7 @@ import sys
 sys.path.append("..")
 from common.settings import cfg
 import common.file_system_manager as fsm
+import common.tree_tools as tt
 
 # TODO: ditch namedtuples and use dataclasses along with json libs for them so we don't need this ugly boilerplate stuff
 
@@ -124,6 +125,8 @@ Measure = namedtuple("Measure", ["staffs", "index", "xml"])
 Line = namedtuple("Line", ["measures", "start", "index"])
 Page = namedtuple("Page", ["lines", "start", "index", "image_name"])
 
+
+# TODO: A score needs to have a context
 class Score:
     """
     The score objects contains the score data:
@@ -145,6 +148,13 @@ class Score:
 
         # MEI parsing
         self.mei = xml.parse(str(mei_path))
+
+        # Build the context:
+        self.context = self.mei.documentElement.cloneNode(deep=True)
+        tt.delete_node(self.context.getElementsByTagName("facsimile")[0])
+        section = self.context.getElementsByTagName("section")[0]
+        tt.replace_child_nodes(section, [])
+        section.appendChild(tt.create_element_node("PUT_TASK_XML_HERE"))
 
         # Storing the zones in a dict and collect page images
         image_names = []
@@ -185,6 +195,17 @@ class Score:
                     score_staff = Staff(ulc, lrc, lrc[0]-ulc[0], lrc[1]-ulc[1], len(staffs), len(self.measures), len(self.lines), len(self.pages), inner_xml, has_clef)
                     staffs.append(score_staff)
                 score_measure = Measure(staffs, len(self.measures), entry.toxml())
+
+                # first measure, populate score def
+                # TODO: figure out what we need
+                if not self.measures:
+                    initial_score_def = self.context.getElementsByTagName("scoreDef")[0]
+                    group = tt.create_element_node("staffGrp")
+                    staff = tt.create_element_node("staffDef")
+                    for s in staffs:
+                        group.appendChild(staff.cloneNode(deep=True))
+                    initial_score_def.appendChild(group)
+
                 self.measures.append(score_measure)
                 line.append(score_measure)
 
@@ -267,6 +288,7 @@ class Score:
             measures.append(Measure(staffs, measure.index, measure.xml)._asdict())
             
         return {
-        "name" : self.name,
-        "measures": measures
+            "name" : self.name,
+            "measures": measures,
+            "context": tt.purge_non_element_nodes(self.context).toprettyxml()
         }
