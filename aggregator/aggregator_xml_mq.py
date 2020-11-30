@@ -53,7 +53,7 @@ def callback(ch, method, properties, body):
             'result': str(final_tree.toprettyxml()),
             'step': task["step"]
         }
-        results_agg_coll.update_one({'task_id': task_id}, {'$set': result_agg}, True)
+        results_agg_coll.update_one({'task_id': task_id}, {'$set': result_agg}, upsert=True)
 
     global channel
     channel.queue_declare(queue=cfg.mq_task_scheduler_status)

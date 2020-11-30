@@ -53,7 +53,7 @@ def callback(ch, method, properties, body):
         counter = counters[field]
         valid_results = []
         for choice in counter:
-            consensus = (len(counter[choice]) / response_count) > cfg.aggregator_form_threshold
+            consensus = (counter[choice] / response_count) > cfg.aggregator_form_threshold
             if consensus:
                 valid_results.append(choice)
         agg_result[field] = valid_results
@@ -80,7 +80,7 @@ def callback(ch, method, properties, body):
             'result': json.dumps(agg_result),
             'step': task["step"]
         }
-        results_agg_coll.update_one({'task_id': task_id}, {'$set': result_agg}, True)
+        results_agg_coll.update_one({'task_id': task_id}, {'$set': result_agg}, upsert=True)
 
     
     global channel
