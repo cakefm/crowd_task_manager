@@ -114,6 +114,7 @@ def take_action_on_status(channel, method, properties, body):
                                                     ],
         ("form_processor", "failed")           :    [
                                                         log_status,
+                                                        invalidate_all_results,
                                                         decrement_step,
                                                         resubmit
                                                     ]             
@@ -255,6 +256,13 @@ def submit_batch(batch, channel):
             channel
         )
 
+
+def invalidate_all_results(message, channel):
+    task_id = message["_id"]    
+    db[cfg.col_result].delete_many({"task_id": task_id})
+
+
+
 # TODO: should generalize this eventually, to be able to go to any step by name
 def decrement_step(message, channel):
     task_id = message["_id"]    
@@ -318,7 +326,7 @@ def send_to_aggregator(message, channel):
     task = get_task(task_id)
     task_type = task_types[task["type"]]
     step = task["step"]
-    result_ids = tuple([x["_id"] for x in db[cfg.col_result].find({"task_id": task_id})])
+    result_ids = tuple([x["_id"] for x in db[cfg.col_result].find({"task_id": task_id, "step": step})])
     result_count = len(result_ids)
     print(f"Counted {result_count} results for task {task_id}")
     if result_count >= task["responses_needed"]:
