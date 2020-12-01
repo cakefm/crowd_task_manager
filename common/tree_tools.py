@@ -17,7 +17,7 @@ def create_element_node(name, attributes = dict()):
     '''
     node = xml.parseString(f"<{name}/>").documentElement
     for key in attributes:
-        node.setAttribute(key, attributes[key])
+        node.setAttribute(str(key), str(attributes[key]))
     return node
 
 def filter_element_nodes(sequence):
