@@ -148,6 +148,8 @@ def update_task_xml(message, channel):
     step = task["step"]
 
     # Should retrieve XML since it only gets called when the task is still in the edit step
+    # NOTE: aggregated result is never deleted, only updated. This will retrieve that result if a task
+    #       gets reset to another step
     current_result = db[cfg.col_aggregated_result].find_one({"task_id": task_id, "step": step})
     if current_result:
         print(f"Updating task {task_id} XML with currently aggregated result from step {step}")
@@ -302,9 +304,9 @@ def submit_batch(batch, channel):
 
 
 def invalidate_task_results(message, channel):
-    task_id = message["_id"]    
+    task_id = message["_id"]
     db[cfg.col_result].delete_many({"task_id": task_id})
-    db[cfg.col_aggregated_result].delete_many({"task_id": task_id})
+
 
 # TODO: should generalize this eventually, to be able to go to any step by name
 def decrement_step(message, channel):
