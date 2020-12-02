@@ -7,6 +7,7 @@ import os
 from uuid import uuid4
 from lxml import etree
 from tqdm import tqdm
+import numpy as np
 
 def run(sheet_name):
 
@@ -62,7 +63,8 @@ def run(sheet_name):
     mei_body.append(mei_mdiv)
 
     mei_score = etree.Element('score')
-    mei_score.append(etree.Element('scoreDef'))
+    mei_score_def = etree.Element('scoreDef')
+    mei_score.append(mei_score_def)
     mei_mdiv.append(mei_score)
 
     mei_section = etree.Element('section')
@@ -91,6 +93,7 @@ def run(sheet_name):
         mei_graphic.attrib['height'] = str(page.height)
         mei_surface.append(mei_graphic)
 
+        staff_counts = []
         for s, system in enumerate(page.systems):
             for m, measure in enumerate(system.measures):
 
@@ -125,9 +128,24 @@ def run(sheet_name):
                     mei_measure.append(mei_staff)
 
                     cur_staff += 1
+                staff_counts.append(cur_staff - 1)
                 cur_measure += 1
             mei_section.append(etree.Element('sb'))
         mei_section.append(etree.Element('pb'))
+
+    # Add the most likely staff configuration to the scoredef
+    # NOTE: does not generalize to scores with more than one staff configuration
+    mei_staff_group = etree.Element('staffGrp')
+    mei_score_def.append(mei_staff_group)
+    for i in range(round(np.mean(staff_counts))):
+        n = i + 1
+        mei_staff_def = etree.Element('staffDef')
+        mei_staff_def.attrib['n'] = str(n)
+        mei_staff_def.attrib['lines'] = '5'  # Render looks weird without lines
+        mei_staff_group.append(mei_staff_def)
+
+
+
 
     mei_path = fsm.get_sheet_whole_directory(sheet_name)
     mei_file_dir = mei_path / "aligned.mei"
