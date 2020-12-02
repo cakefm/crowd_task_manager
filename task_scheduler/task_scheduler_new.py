@@ -32,8 +32,8 @@ def getXMLofSlice(measure_slice):
             if index < staff_start or index >= staff_end:
                 tt.delete_node(staff)
         merged += measure_node.toxml()
-    
-    return f"<temproot>{merged}</temproot>"
+    # Assume section is most top-level for results
+    return f"<section>{merged}</section>"
 
 def send_message(message, queue, channel):
     json_str = json.dumps(message)
