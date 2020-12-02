@@ -100,6 +100,7 @@ def run(sheet_name):
                 mei_measure.attrib['label'] = str(cur_measure)
                 mei_section.append(mei_measure)
 
+                cur_staff = 1
                 for st, staff in enumerate(measure.staffs):
                     mei_zone = etree.Element('zone')
                     mei_zone_id = 'zone_' + str(uuid4())
