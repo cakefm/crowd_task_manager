@@ -17,7 +17,9 @@ def run(sheet_name):
     <mei xmlns="http://www.music-encoding.org/ns/mei">
         <meiHead>
             <fileDesc>
-                <titleStmt/>
+                <titleStmt>
+                    <title/>
+                </titleStmt>
                 <pubStmt/>
             </fileDesc>
              <encodingDesc>
