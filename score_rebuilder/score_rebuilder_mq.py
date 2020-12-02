@@ -52,8 +52,9 @@ def callback(ch, method, properties, body):
 
         # Re-enumerate
         for index, measure in enumerate(mei_measures):
-            measure.setAttribute("n", str(index))
-            measure.setAttribute("label", str(index))
+            n = index + 1
+            measure.setAttribute("n", str(n))
+            measure.setAttribute("label", str(n))
 
 
     # Perform non-skeletal modifications in any other stage
