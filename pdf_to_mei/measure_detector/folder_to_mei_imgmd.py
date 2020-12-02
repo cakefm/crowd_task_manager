@@ -74,6 +74,9 @@ def run(sheet_name):
 
     cur_measure, cur_staff = 1, 1
 
+    staff_counts = []
+    section_lengths = []
+    measures_per_page = []
     for p, result in enumerate(results):
         page, path = result['page'], result['path']
 
@@ -93,7 +96,6 @@ def run(sheet_name):
         mei_graphic.attrib['height'] = str(page.height)
         mei_surface.append(mei_graphic)
 
-        staff_counts = []
         for s, system in enumerate(page.systems):
             for m, measure in enumerate(system.measures):
 
@@ -131,7 +133,9 @@ def run(sheet_name):
                 staff_counts.append(cur_staff - 1)
                 cur_measure += 1
             mei_section.append(etree.Element('sb'))
+            section_lengths.append(cur_measure - 1 - sum(section_lengths))
         mei_section.append(etree.Element('pb'))
+        measures_per_page.append(cur_measure - 1 - sum(measures_per_page))
 
     # Add the most likely staff configuration to the scoredef
     # NOTE: does not generalize to scores with more than one staff configuration
@@ -144,7 +148,15 @@ def run(sheet_name):
         mei_staff_def.attrib['lines'] = '5'  # Render looks weird without lines
         mei_staff_group.append(mei_staff_def)
 
-
+    # Print some detection statistics
+    print("Detection Statistics:")
+    print(f"{'  mean staff count:':<20}{np.mean(np.mean(staff_counts))}")
+    print(f"{'  mean line length:':<20}{np.mean(np.mean(section_lengths))}")
+    print(f"{'  mean measures per page:':<20}{np.mean(np.mean(measures_per_page))}")
+    print(f"{'  measures per page:'}")
+    for i, count in enumerate(measures_per_page):
+        page = i + 1
+        print(f"{'  - ' + str(page):<20}{count}")
 
 
     mei_path = fsm.get_sheet_whole_directory(sheet_name)
