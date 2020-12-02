@@ -117,6 +117,11 @@ def run(sheet_name):
                     mei_staff.attrib['n'] = str(cur_staff)
                     mei_staff.attrib['label'] = str(cur_staff)
                     mei_staff.attrib['facs'] = f'#{mei_zone_id}'
+
+                    # Staffs should have at least one layer, can optionally be enumerated with "n" if we need more
+                    mei_layer = etree.Element('layer')
+                    mei_staff.append(mei_layer)
+
                     mei_measure.append(mei_staff)
 
                     cur_staff += 1
