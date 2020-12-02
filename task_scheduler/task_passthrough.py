@@ -33,7 +33,8 @@ def callback(channel, method, properties, body):
         modified_tree = tree.cloneNode(deep=True)
         # Puts a cleff in every measure of the slice, though these slices only have one measure
         for staff in modified_tree.getElementsByTagName("staff"):
-            staff.appendChild(node.cloneNode(deep=True))
+            for layer in staff.getElementsByTagName("layer"):
+                layer.appendChild(node.cloneNode(deep=True))
         payload = modified_tree.toprettyxml()
     elif task["type"]=="1_detect_clefs" and task["step"]=="verify":
         payload = json.dumps({"verify": [np.random.random() < 0.8]})
