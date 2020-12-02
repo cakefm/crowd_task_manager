@@ -56,6 +56,11 @@ def callback(ch, method, properties, body):
             measure.setAttribute("n", str(n))
             measure.setAttribute("label", str(n))
 
+            for staff_index, staff in enumerate(measure.getElementsByTagName("staff")):
+                staff_n = staff_index + 1
+                staff.setAttribute("n", str(n))
+
+
 
     # Perform non-skeletal modifications in any other stage
     else:
