@@ -41,7 +41,7 @@ def callback(channel, method, properties, body):
     
     for i in range(threshold):
         requests.post(f"http://localhost:443/{task['_id']}", data=payload)
-        for j in range(0):
+        for j in range(0): # Putting this to >0 will simulate delay in response
             connection.process_data_events()
             time.sleep(0.2)
     print(f"Passed through task with ID {task['_id']} as result {threshold} times")

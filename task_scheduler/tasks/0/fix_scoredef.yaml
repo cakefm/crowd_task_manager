@@ -1,5 +1,3 @@
-dependencies: []                  # Set of names of task types this task type depends on
-
 steps:                            # Ordered steps for this task, each step has a 'name' and 'requirements'
 - name: edit
   requirements : []               # List of UI requirements for this task step
