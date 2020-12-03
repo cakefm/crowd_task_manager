@@ -31,15 +31,20 @@ def callback(ch, method, properties, body):
 
     status_update_msg = {
         "_id": task_id,
-        "module": "form_processor",
-        "status": "complete"
+        "module": "form_processor"
     }
 
     form_output = json.loads(aggregated_result["result"])
-    if task["type"]=="1_detect_clefs" and task["step"]=="verify":
+    # General procedure for all verification steps
+    if task["step"]=="verify":
         verification_passed = form_output["verify"][0]
-        if not verification_passed:
-            status_update_msg["status"] = "failed"
+        if verification_passed:
+            status_update_msg["status"] = "verification-passed"
+        else:
+            status_update_msg["status"] = "verification-failed"
+
+    if "status" not in status_update_msg:
+        raise Exception(f"Task of type {task['type']} did not receive a status, make sure it gets handled in this module!")
 
     global channel
     channel.queue_declare(queue=cfg.mq_task_scheduler_status)

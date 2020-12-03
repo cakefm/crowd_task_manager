@@ -76,46 +76,46 @@ def take_action_on_status(channel, method, properties, body):
     # TODO: rewrite back to if/else again, this is hell for debugging
     # TODO: split "checks" from "actions", makes code more readable and predictable
     actions = {
-        ("api", None)                           :   [
-                                                        log_status, 
+        ("api", None):                              [
+                                                        log_status,
                                                         send_to_aggregator
                                                     ],
-        ("aggregator_xml",  "complete")         :   [
-                                                        log_status, 
+        ("aggregator_xml",  "complete"):            [
+                                                        log_status,
                                                         rebuild_score,
                                                         update_task_xml
                                                     ],
-        ("aggregator_xml",  "failed")           :   [
-                                                        log_status, 
+        ("aggregator_xml",  "failed"):              [
+                                                        log_status,
                                                         resubmit
                                                     ],
-        ("score_rebuilder", "complete")         :   [
+        ("score_rebuilder", "complete"):            [
                                                         log_status,
                                                         github_commit,
                                                         increment_step,
                                                         resubmit
                                                     ],
-        ("aggregator_form", "complete")         :   [
-                                                        log_status, 
+        ("aggregator_form", "complete"):            [
+                                                        log_status,
                                                         process_form_output
                                                     ],
-        ("aggregator_form", "failed")           :   [
-                                                        log_status, 
+        ("aggregator_form", "failed"):              [
+                                                        log_status,
                                                         resubmit
                                                     ],
-        ("form_processor", "complete")         :    [
+        ("form_processor", "verification-passed"):  [
                                                         log_status,
                                                         increment_step,
                                                         resubmit
                                                     ],
-        ("form_processor", "failed")           :    [
+        ("form_processor", "verification-failed"):  [
                                                         log_status,
                                                         invalidate_task_results,
                                                         decrement_step,
                                                         update_task_xml,
                                                         resubmit
                                                     ],
-        ("task_scheduler", "complete")         :    [
+        ("task_scheduler", "complete"):             [
                                                         log_status,
                                                         submit_next_batch,
                                                         check_task_type_completion,
