@@ -8,6 +8,7 @@ from common.settings import cfg
 
 GAP_ELEMENT_NAME = "gap"
 GAP_PENALTY = 10
+IGNORE = {"xml:id", "label", "startid", "endid", "facs"}
 
 def create_gap_element():
     return tt.create_element_node(GAP_ELEMENT_NAME)
@@ -70,8 +71,9 @@ def align_xml(A, B, distance_function, gap_penalty):
     
     return A_aligned, B_aligned, distance
 
+
 # TODO: Get rid of magic numbers
-def node_distance(a, b, ignored = {"xml:id", "label", "startid", "endid", "facs"}):
+def node_distance(a, b, ignored = IGNORE):
     penalty = 0
     
     # Different tag
@@ -89,7 +91,26 @@ def node_distance(a, b, ignored = {"xml:id", "label", "startid", "endid", "facs"
             penalty += 2
     
     return penalty
-    
+
+# Make it beneficial to match on index if present
+# Punish mismatches in crmp_id if present
+# Should work as long as there aren't nodes in the same list of children with the same index
+def node_distance_anchored(a, b, ignored = IGNORE):
+    distance = node_distance(a, b, ignored)
+    a_n = a.getAttribute("n")
+    b_n = b.getAttribute("n")
+    if a_n != "" and b_n != "":
+        if a_n==b_n and a.tagName==b.tagName:
+            distance = 0
+
+    a_crmp = a.getAttribute("crmp_id")
+    b_crmp = b.getAttribute("crmp_id")
+    if a_crmp != "" and b_crmp != "":
+        if a_crmp != b_crmp:
+            distance += 1000
+
+    return distance
+
 # Tree alignment: traverses all the nodes in the tree while keeping track of the total distance and node count
 def align_trees_pairwise(tree1, tree2, distance_function=node_distance, gap_penalty=GAP_PENALTY):
     nodes1 = [node for node in tree1.childNodes if node.nodeType == xml.Node.ELEMENT_NODE]
@@ -173,6 +194,14 @@ def align_trees_multiple(trees, distance_function=node_distance, gap_penalty=GAP
         print()
         print()
         print("------------------------------------------------")
+
+    # Too spammy, since we use the aggregator in the score rebuilder: the above prints do not trigger for 2-tree alignments
+
+    # print("===FINAL RESULTS:")
+    # for index, tree in enumerate(mas):
+    #     print(f"TREE AT INDEX {index}:")
+    #     print(tree.toprettyxml())
+    #     print("============")
     return mas
 
 
@@ -181,11 +210,11 @@ def copy_gaps(tree1, tree2):
         tt.insert_node_with_extension(tree2.documentElement, path, create_gap_element(), create_gap_element())
 
 
-def consensus_best_node_distance(nodes):
+def consensus_best_node_distance(nodes, distance_function=node_distance):
     node_distances = np.full((len(nodes), len(nodes)), np.inf)
     for i, a in enumerate(nodes):
         for j, b in enumerate(nodes): 
-            node_distances[i, j] = node_distance(a, b)
+            node_distances[i, j] = distance_function(a, b)
     
     # Get the cumulative distances of all the nodes to one another
     node_distance_bins = [0] * len(nodes)
@@ -207,14 +236,14 @@ def consensus_best_node_distance(nodes):
 
     return nodes[np.argmin(node_distance_bins)], consensus
 
-def consensus_bnd_enrich_skeleton(nodes):
+def consensus_bnd_enrich_skeleton(nodes, distance_function=node_distance):
     first = nodes[0]
     if first.tagName == "measure":
         return first, True
     if first.tagName==GAP_ELEMENT_NAME:
-        best, consensus = consensus_best_node_distance(nodes[1:])
+        best, consensus = consensus_best_node_distance(nodes[1:], distance_function=distance_function)
     else:
-        best, consensus = consensus_best_node_distance(nodes)
+        best, consensus = consensus_best_node_distance(nodes, distance_function=distance_function)
     return best, consensus
 
 def build_consensus_tree(trees, consensus_method = consensus_best_node_distance, exclude = [GAP_ELEMENT_NAME]):
