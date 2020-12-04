@@ -20,6 +20,25 @@ def create_element_node(name, attributes = dict()):
         node.setAttribute(str(key), str(attributes[key]))
     return node
 
+def matching_pairs(sequence_1, sequence_2, attribute_names):
+    '''
+    Match two sequences on attributes in order to create a list with matching pairs.
+
+    Arguments:
+        sequence_1 (list<Node>)               -- A list with nodes
+        sequence_2 (list<Node>)               -- A list with nodes
+        attribute_names (list<str>)           -- A list with attribute names
+
+    Returns:
+        list (List<Node, Node>)               -- List for matching pairs
+    '''
+    pairs = []
+    for a in sequence_1:
+        for b in sequence_2:
+            if all([a.getAttribute(attr) == b.getAttribute(attr) for attr in attribute_names]):
+                pairs.append((a, b))
+    return pairs
+
 def filter_element_nodes(sequence):
     '''
     Filters element nodes from a sequence of nodes.
