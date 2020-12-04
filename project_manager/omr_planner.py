@@ -16,6 +16,7 @@ client = MongoClient(cfg.mongodb_address.ip, cfg.mongodb_address.port)
 db = client[cfg.db_name]
 scheduled_messages = {}
 
+# TODO: needs to be rewritten in callback form, otherwise it will time-out when its queue is empty for a long time
 
 def schedule_message(trigger, message, queue):
     print(f"Scheduling message {message} on trigger {trigger} for queue {queue}")
@@ -55,6 +56,7 @@ def send_message(queue_name, routing_key, message):
     channel = connection.channel()
     channel.queue_declare(queue=queue_name)
     channel.basic_publish(exchange='', routing_key=routing_key, body=message)
+    channel.close()
     connection.close()
 
 
@@ -181,14 +183,16 @@ def main():
 
                     # For now just send to slicer
                     # TODO: maybe later we should send to aligner first?
-                    if stage==0:
+                    if stage in {0, 1}:
                         print("Sending to slicer to rebuild")
                         send_message(
-                        cfg.mq_slicer,
-                        cfg.mq_slicer,
-                        json.dumps({
-                            '_id': score_status['_id'],
-                            'name': score_status['name']}))
+                            cfg.mq_slicer,
+                            cfg.mq_slicer,
+                            json.dumps({
+                                '_id': score_status['_id'],
+                                'name': score_status['name']
+                            })
+                        )
                     continue
                 if score_status['module'] == 'task_scheduler' and 'task_type' in score_status:
                     # Here we should let the CE know some task type has been completed
