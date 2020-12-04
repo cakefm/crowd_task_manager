@@ -98,6 +98,7 @@ def take_action_on_status(channel, method, properties, body):
                                                     ],
         ("aggregator_xml",  "failed"):              [
                                                         log_status,
+                                                        increment_responses_needed,
                                                         resubmit
                                                     ],
         ("score_rebuilder", "complete"):            [
@@ -112,6 +113,7 @@ def take_action_on_status(channel, method, properties, body):
                                                     ],
         ("aggregator_form", "failed"):              [
                                                         log_status,
+                                                        increment_responses_needed,
                                                         resubmit
                                                     ],
         ("form_processor", "verification-passed"):  [
@@ -137,6 +139,13 @@ def take_action_on_status(channel, method, properties, body):
     for action in actions:
         # print(f"Executing {action} triggered by {message}")
         action(message, channel)
+
+
+def increment_responses_needed(message, channel):
+    task_id = message["_id"]
+    task = get_task(task_id)
+    new_responses_needed = task["responses_needed"] + 1
+    db[cfg.col_task].update_one({"_id": ObjectId(task_id)}, {"$set": {"responses_needed": new_responses_needed}})
 
 
 def github_commit(message, channel):

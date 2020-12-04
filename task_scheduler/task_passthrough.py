@@ -32,7 +32,6 @@ note_chance = 0.1
 indices = {}
 staff_indices = {}
 
-
 def populate_payload_xml(score, tree, task):
     task_type_name = task["type"]
     task_step_name = task["step"]
@@ -104,6 +103,7 @@ def callback(channel, method, properties, body):
     elif result_type=="form":
         payload = populate_payload_form(score, tree, task, {})
 
+    # TODO: Somehow vary the responses per submission
     for i in range(threshold):
         requests.post(f"http://localhost:443/{task['_id']}", data=payload)
         for j in range(0): # Putting this to >0 will simulate delay in response
