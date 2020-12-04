@@ -14,27 +14,7 @@ from task_type import TaskType, Stage
 from task_type import DONE_STEP
 import xml.dom.minidom as xml
 
-# # TODO: maybe move this away from here
-# def getXMLofSlice(measure_slice):
-#     score_name = measure_slice["score"]
-#     start = measure_slice['start']
-#     end = measure_slice['end']
-#     staff_start = measure_slice['staff_start']
-#     staff_end = measure_slice['staff_end']
-
-#     score = db[cfg.col_score].find_one({"name": score_name})
-
-#     merged = ""
-#     for measure in score["measures"][start:end]:
-#         measure_node = xml.parseString(measure["xml"]).documentElement
-#         # Pick only the staffs we want to display
-#         for index, staff in enumerate(measure_node.getElementsByTagName("staff")):
-#             if index < staff_start or index >= staff_end:
-#                 tt.delete_node(staff)
-#         merged += measure_node.toxml()
-#     # Assume section is most top-level for results
-#     return f"<section>{merged}</section>"
-
+# TODO: maybe move this away from here, might need to be a method on a slice
 # TODO: Potentially we always need to start from n=1 to make verovio's renderer happy
 #       But we need to keep track of the "n" values to make score rebuilding happen correctly
 def get_slice_context_and_xml(measure_slice):
