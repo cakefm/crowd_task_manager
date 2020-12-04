@@ -14,26 +14,57 @@ from task_type import TaskType, Stage
 from task_type import DONE_STEP
 import xml.dom.minidom as xml
 
-# TODO: maybe move this away from here
-def getXMLofSlice(measure_slice):
+# # TODO: maybe move this away from here
+# def getXMLofSlice(measure_slice):
+#     score_name = measure_slice["score"]
+#     start = measure_slice['start']
+#     end = measure_slice['end']
+#     staff_start = measure_slice['staff_start']
+#     staff_end = measure_slice['staff_end']
+
+#     score = db[cfg.col_score].find_one({"name": score_name})
+
+#     merged = ""
+#     for measure in score["measures"][start:end]:
+#         measure_node = xml.parseString(measure["xml"]).documentElement
+#         # Pick only the staffs we want to display
+#         for index, staff in enumerate(measure_node.getElementsByTagName("staff")):
+#             if index < staff_start or index >= staff_end:
+#                 tt.delete_node(staff)
+#         merged += measure_node.toxml()
+#     # Assume section is most top-level for results
+#     return f"<section>{merged}</section>"
+
+# TODO: Potentially we always need to start from n=1 to make verovio's renderer happy
+#       But we need to keep track of the "n" values to make score rebuilding happen correctly
+def get_slice_context_and_xml(measure_slice):
     score_name = measure_slice["score"]
     start = measure_slice['start']
     end = measure_slice['end']
-    staff_start = measure_slice['staff_start']
-    staff_end = measure_slice['staff_end']
+    staff_range = [str(x) for x in range(
+        measure_slice['staff_start'] + 1,
+        measure_slice['staff_end'] + 1
+    )]
 
     score = db[cfg.col_score].find_one({"name": score_name})
 
-    merged = ""
+    section = tt.create_element_node("section")
+
     for measure in score["measures"][start:end]:
-        measure_node = xml.parseString(measure["xml"]).documentElement
-        # Pick only the staffs we want to display
-        for index, staff in enumerate(measure_node.getElementsByTagName("staff")):
-            if index < staff_start or index >= staff_end:
+        score_def = measure["score_def_before_measure"]
+        if score_def:
+            section.appendChild(xml.parseString(score_def).documentElement)
+        section.appendChild(xml.parseString(measure["xml"]).documentElement)
+
+    context = xml.parseString(measure["context"]).documentElement
+
+    for node in list(section.childNodes) + context.getElementsByTagName('scoreDef'):
+        staffs = list(node.getElementsByTagName("staff")) + list(node.getElementsByTagName("staffDef"))
+        for staff in staffs:
+            if staff.getAttribute("n") not in staff_range:
                 tt.delete_node(staff)
-        merged += measure_node.toxml()
-    # Assume section is most top-level for results
-    return f"<section>{merged}</section>"
+
+    return section.toxml(), context.toxml()
 
 def send_message(message, queue, channel):
     json_str = json.dumps(message)
@@ -448,7 +479,7 @@ def create_tasks_and_batches_for_stage(stage, score_name):
             copy_destination = str(fsm.get_sheet_api_directory(measure_slice['score'], slice_type=task_type.slice_type) / measure_slice['name'])
             first_step = next(iter(task_type.steps.keys()))
             step_submission = {s: False for s in task_type.steps.keys()}
-            xml = getXMLofSlice(measure_slice)
+            xml, context = get_slice_context_and_xml(measure_slice)
             task = {
                 'name': measure_slice['name'],
                 'type': task_type.name,
@@ -459,6 +490,7 @@ def create_tasks_and_batches_for_stage(stage, score_name):
                 'step': first_step,
                 'initial_xml': xml,
                 'xml': xml,
+                'context': context,
                 'responses_needed': task_type.steps[first_step]["min_responses"],
                 'batch_id': None, # Gets assigned later,
                 'stage': stage.order

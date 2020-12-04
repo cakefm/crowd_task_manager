@@ -93,35 +93,20 @@ class Slice(namedtuple("ImmutableSlice", ["score", "start", "end", "staff_start"
         Get a dictionary representation of the object for storage in the database.
         """
         return {
-        "name" : self.get_name(), 
-        "score" : self.score.name,
-        "start" : self.start,
-        "end" : self.end,
-        "staff_start" : self.staff_start,
-        "staff_end" : self.staff_end,
-        "type" : self.type,
-        "tuple_size" : self.tuple_size
+            "name": self.get_name(),
+            "score": self.score.name,
+            "start": self.start,
+            "end": self.end,
+            "staff_start": self.staff_start,
+            "staff_end": self.staff_end,
+            "type": self.type,
+            "tuple_size": self.tuple_size
         }
 
 
 # Convenience classes
-
-# class Staff():
-#     """
-#     Get a dictionary representation of the object for storage in the database.
-#     """
-#     def to_db_dict(self):
-#         return {
-#         "index" : self.index,
-#         "measure_index" : self.measure,
-#         "line_index" : self.line,
-#         "page_index" : self.page,
-#         "xml" : self.xml,
-#         "has_clef" : self.has_clef
-#         }
-
 Staff = namedtuple("Staff", ["ulc", "lrc", "width", "height", "index", "measure_index", "line_index", "page_index", "xml", "has_clef"])
-Measure = namedtuple("Measure", ["staffs", "index", "xml"])
+Measure = namedtuple("Measure", ["staffs", "index", "xml", "context", "score_def_before_measure"])
 Line = namedtuple("Line", ["measures", "start", "index"])
 Page = namedtuple("Page", ["lines", "start", "index", "image_name"])
 
@@ -149,13 +134,6 @@ class Score:
         # MEI parsing
         self.mei = xml.parse(str(mei_path))
 
-        # Build the context:
-        self.context = self.mei.documentElement.cloneNode(deep=True)
-        tt.delete_node(self.context.getElementsByTagName("facsimile")[0])
-        section = self.context.getElementsByTagName("section")[0]
-        tt.replace_child_nodes(section, [])
-        section.appendChild(tt.create_element_node("PUT_TASK_XML_HERE"))
-
         # Storing the zones in a dict and collect page images
         image_names = []
         zones = {}
@@ -169,10 +147,23 @@ class Score:
         line = []
         page = []
         entries = [x for x in self.mei.getElementsByTagName("section")[0].childNodes if x.nodeType==xml.Node.ELEMENT_NODE]
-        for entry in entries[1:]: # Skip the first page separator
+        skipped_first_page_tag = False
+        accumulated_score_def = self.mei.getElementsByTagName("scoreDef")[0]  # The initial one
+        last_score_def_index = -1
+        score_def_before_measure = None
+        self.context = self.build_initial_context()
+        for entry_index, entry in enumerate(entries):
             if entry.tagName == "pb" and page:
-                self.pages.append(Page(tuple(page), page[0].measures[0].index, len(self.pages), image_names[len(self.pages)]))
-                del page[:]
+                if not skipped_first_page_tag:
+                    skipped_first_page_tag = True
+                else:
+                    self.pages.append(Page(tuple(page), page[0].measures[0].index, len(self.pages), image_names[len(self.pages)]))
+                    del page[:]
+            if entry.tagName == "scoreDef":
+                self.update_score_def_with_score_def(accumulated_score_def, entry)
+                last_score_def_index = entry_index
+                score_def_before_measure = entry
+                pass
             if entry.tagName == "sb" or entry.tagName == "pb" and line:
                 line_obj = Line(tuple(line), line[0].index, len(self.lines))
                 self.lines.append(line_obj)
@@ -185,29 +176,108 @@ class Score:
                     ulc = tuple([int(v) for v in (zone.attributes["ulx"].value, zone.attributes["uly"].value)])  # Upper left corner
                     lrc = tuple([int(v) for v in (zone.attributes["lrx"].value, zone.attributes["lry"].value)])  # Lower right corner
 
+                    # TODO: this seems redundant, should be solved by making specific slices instead
                     has_clef = False
                     # If the line list is empty, this measure is the first measure, and thus the staff contains a clef
-                    if not line: 
+                    if not line:
                         has_clef = True
 
                     inner_xml = staff.toxml()
 
                     score_staff = Staff(ulc, lrc, lrc[0]-ulc[0], lrc[1]-ulc[1], len(staffs), len(self.measures), len(self.lines), len(self.pages), inner_xml, has_clef)
                     staffs.append(score_staff)
-                score_measure = Measure(staffs, len(self.measures), entry.toxml())
 
-                # first measure, populate score def
-                # TODO: figure out what we need
-                if not self.measures:
-                    initial_score_def = self.context.getElementsByTagName("scoreDef")[0]
-                    group = tt.create_element_node("staffGrp")
-                    staff = tt.create_element_node("staffDef")
-                    for s in staffs:
-                        group.appendChild(staff.cloneNode(deep=True))
-                    initial_score_def.appendChild(group)
+                # Adapt context for measure
+                measure_context = self.context.cloneNode(deep=True)
+                measure_context_score_def = measure_context.getElementsByTagName("scoreDef")[0]
+                self.update_score_def_with_score_def(measure_context_score_def, accumulated_score_def)
+                for staffDef in measure_context_score_def.getElementsByTagName("staffDef"):
+                    staff_n = staffDef.getAttribute("n")
+                    clef, clef_entry_index = self.backtrack_first_staff_with_clef(entry, entries, staff_n)
+
+                    # If the clef came later than the last scoredef, we should override the clef
+                    if clef and clef_entry_index > last_score_def_index:
+                        self.update_score_def_with_clef(measure_context_score_def, clef, staff_n)
+
+                score_def_before_measure_xml = None
+                if score_def_before_measure:
+                    score_def_before_measure_xml = score_def_before_measure.toxml()
+                    score_def_before_measure = None
+
+                score_measure = Measure(
+                    staffs,
+                    len(self.measures),
+                    entry.toxml(),
+                    measure_context.toxml(),
+                    score_def_before_measure_xml)
 
                 self.measures.append(score_measure)
                 line.append(score_measure)
+
+    def backtrack_first_measure_with_clef(self, measure, entries):
+        measure_index = entries.index(measure)
+        clef_measure = None
+        clef_measure_index = -1
+        for entry in reversed(entries[:measure_index]):
+            if len(entry.getElementsByTagName("clef")) > 0:
+                clef_measure = entry
+                clef_measure_index = entries.index(clef_measure)
+                break
+        return clef_measure, clef_measure_index
+
+    def backtrack_first_staff_with_clef(self, measure, entries, n):
+        measure_index = entries.index(measure)
+        clef = None
+        clef_entry_index = -1
+
+        for entry in reversed(entries[:measure_index]):
+            staffs = entry.getElementsByTagName("staff")
+            for staff in staffs:
+                if staff.getAttribute("n") == n:
+                    clefs = staff.getElementsByTagName("clef")
+                    if len(clefs) > 0:
+                        clef = clefs[-1]  # take the last one
+                        clef_entry_index = entries.index(entry)
+                        break
+            if clef:
+                break
+        return clef, clef_entry_index
+
+    def build_initial_context(self):
+        context = self.mei.documentElement.cloneNode(deep=True)
+        tt.delete_node(context.getElementsByTagName("facsimile")[0])
+        section = context.getElementsByTagName("section")[0]
+        tt.replace_child_nodes(section, [])
+        section.appendChild(tt.create_element_node("PUT_TASK_XML_HERE"))
+        return context
+
+    # TODO: Breaks when clef is in measure instead of staff, will not be the case for now
+    def update_score_def_with_clef(self, score_def, clef, n):
+        initial_staff_defs = score_def.getElementsByTagName("staffDef")
+        clef_shape = clef.getAttribute("shape")
+        clef_line = clef.getAttribute("line")
+        for staff_def in initial_staff_defs:
+            if staff_def.getAttribute("n") == n:
+                if clef_shape:
+                    staff_def.setAttribute("clef.shape", clef_shape)
+                if clef_line:
+                    staff_def.setAttribute("clef.line", clef_line)
+
+    def update_score_def_with_score_def(self, score_def, new_score_def):
+        attributes = ["key.mode", "key.sig", "meter.unit", "meter.count", "clef.size", "clef.shape"]
+        staff_defs = score_def.getElementsByTagName("staffDef")
+        new_staff_defs = new_score_def.getElementsByTagName("staffDef")
+
+        for attr in attributes:
+            # Sometimes, the score def itself contains some properties, we should try to set those as well
+            value = new_score_def.getAttribute(attr)
+            if value:
+                score_def.setAttribute(attr, value)
+
+            for old_staff_def, new_staff_def in tt.matching_pairs(staff_defs, new_staff_defs, ["n"]):
+                value = new_staff_def.getAttribute(attr)
+                if value:
+                    old_staff_def.setAttribute(attr, value)
 
     def get_page_image(self, page_index):
         """
@@ -220,7 +290,7 @@ class Score:
 
     def _get_n_iterator(self, L, n):
         """
-        Builds a list of `n`-tuples that contain elements from `L` in sequence.   
+        Builds a list of `n`-tuples that contain elements from `L` in sequence.
 
         Example:
         L = [a, b, c, d]
@@ -276,7 +346,6 @@ class Score:
             slices.append(Slice(self, s, e + 1, staff_start, staff_end, "measures", n))
         return slices
 
-    
     def to_db_dict(self):
         """
         Get a dictionary representation of the object for storage in the database.
@@ -285,8 +354,13 @@ class Score:
         measures = []
         for measure in self.measures:
             staffs = [staff._asdict() for staff in measure.staffs]
-            measures.append(Measure(staffs, measure.index, measure.xml)._asdict())
-            
+            measures.append(Measure(
+                staffs,
+                measure.index,
+                measure.xml,
+                measure.context,
+                measure.score_def_before_measure)._asdict())
+
         return {
             "name" : self.name,
             "measures": measures,
