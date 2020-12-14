@@ -291,6 +291,8 @@ def submit_next_batch(message, channel):
     tasks = list(db[cfg.col_task].find({'_id': {"$in": task_ids}}))
 
     if all([t["step"] == DONE_STEP for t in tasks]):
+        print(f"Batch {batch['_id']} complete, sending push message to github update..")
+
         # Push per completed batch
         send_message(
             {
