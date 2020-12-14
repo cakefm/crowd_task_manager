@@ -9,7 +9,7 @@ from github import Github
 from pymongo import MongoClient
 
 sys.path.append("..")
-import common.settings as settings
+from common.settings import cfg
 import common.file_system_manager as fsm
 from github_common import commit, push
 
@@ -26,7 +26,7 @@ def callback(ch, method, properties, body):
 
     # Github
     github = Github(cfg.github_token)
-    org = github.get_organization(cfg.github_organization_name)
+    org = github.get_organization(cfg.github_organization)
     repo = org.create_repo(sheet_name, description=f"Repository for {sheet_name}", auto_init=True)
 
     # Git
@@ -37,23 +37,23 @@ def callback(ch, method, properties, body):
     # Add the PDF
     pdf_path = fsm.get_sheet_whole_directory(sheet_name) / (sheet_name + ".pdf")
     shutil.copy(str(pdf_path), str(fsm.get_sheet_git_directory(sheet_name)))
-    commit(clone, "Initialize master branch")
+    commit(clone, "Initialize main branch")
     push(clone)
 
     # Add the MEI
-    clone.create_branch(cfg.github_branch_name, clone.head.peel())
-    branch = clone.lookup_branch(cfg.github_branch_name)
+    clone.create_branch(cfg.github_branch, clone.head.peel())
+    branch = clone.lookup_branch(cfg.github_branch)
     ref = clone.lookup_reference(branch.name)
     clone.checkout(ref)
 
     mei_path = fsm.get_sheet_whole_directory(sheet_name) / "aligned.mei"
     shutil.copy(str(mei_path), str(fsm.get_sheet_git_directory(sheet_name)))
-    commit(clone, "Initialize crowd manager branch", branch=cfg.github_branch_name)
-    push(clone, branch=cfg.github_branch_name)
+    commit(clone, "Initialize crowd manager branch", branch=cfg.github_branch)
+    push(clone, branch=cfg.github_branch)
 
-    # Protect the newly created/pushed branch and the master branch on Github
-    repo.get_branch("master").edit_protection(user_push_restrictions=[cfg.github_user])
-    repo.get_branch(cfg.github_branch_name).edit_protection(user_push_restrictions=[cfg.github_user])
+    # Protect the newly created/pushed branch and the main branch on Github
+    repo.get_branch("main").edit_protection(user_push_restrictions=[cfg.github_user])
+    repo.get_branch(cfg.github_branch).edit_protection(user_push_restrictions=[cfg.github_user])
     
     # Clean up (needed since pygit2 tends to leave files in .git open)
     del clone
