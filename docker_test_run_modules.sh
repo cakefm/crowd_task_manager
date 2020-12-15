@@ -1,45 +1,4 @@
 #!/bin/sh
-# stop running modules
-# if screen -list | grep -q "omr_planner"; then
-#     echo 'stopping omr_planner'
-#     screen -XS omr_planner quit
-# fi
-
-# if screen -list | grep -q "ce_comm"; then
-#     echo 'stopping ce_comm'
-#     screen -XS ce_comm quit
-# fi
-
-# if screen -list | grep -q "pdf2mei"; then
-#     echo 'stopping pdf2mei'
-#     screen -XS pdf2mei quit
-# fi
-
-# if screen -list | grep -q "slicer"; then
-#     echo 'stopping slicer'
-#     screen -XS slicer quit
-# fi
-
-# if screen -list | grep -q "task_scheduler"; then
-#     echo 'stopping task_scheduler'
-#     screen -XS task_scheduler quit
-# fi
-
-# if screen -list | grep -q "score_rebuilder"; then
-#     echo 'stopping score_rebuilder'
-#     screen -XS score_rebuilder quit
-# fi
-
-# if screen -list | grep -q "github_init"; then
-#     echo 'stopping github_init'
-#     screen -XS github_init quit
-# fi
-
-# if screen -list | grep -q "github_update"; then
-#     echo 'stopping github_update'
-#     screen -XS github_update quit
-# fi
-
 
 # start modules
 if ! screen -list | grep -q "omr_planner"; then
@@ -47,12 +6,6 @@ if ! screen -list | grep -q "omr_planner"; then
     cd $HOME/crowd-task-manager/project_manager
     screen -L -Logfile screen_log -dm -S omr_planner python3 omr_planner.py
 fi
-
-# if ! screen -list | grep -q "ce_comm"; then
-#     echo 'starting ce_comm'
-#     cd $HOME/crowd-task-manager/ce_integration
-#     screen -dm -S ce_comm bash -c 'python3 ce_communicator.py'
-# fi
 
 if ! screen -list | grep -q "pdf2mei"; then
     echo 'starting pdf2mei'
@@ -90,7 +43,6 @@ if ! screen -list | grep -q "aggregator_form"; then
     screen -L -Logfile screen_log_form -dm -S aggregator_form python3 aggregator_form_mq.py
 fi
 
-
 if ! screen -list | grep -q "score_rebuilder"; then
     echo 'starting score rebuilder'
     cd $HOME/crowd-task-manager/score_rebuilder
@@ -101,18 +53,6 @@ if ! screen -list | grep -q "form_processor"; then
     echo 'starting form processor'
     cd $HOME/crowd-task-manager/form_processor
     screen -L -Logfile screen_log -dm -S form_processor python3 form_processor_mq.py
-fi
-
-if ! screen -list | grep -q "github_init"; then
-    echo 'starting github_init'
-    cd $HOME/crowd-task-manager/github
-    screen -L -Logfile screen_log_init -dm -S github_init python3 github_init_mq.py
-fi
-
-if ! screen -list | grep -q "github_update"; then
-    echo 'starting github_update'
-    cd $HOME/crowd-task-manager/github
-    screen -L -Logfile screen_log_update -dm -S github_update python3 github_update_mq.py
 fi
 
 if ! screen -list | grep -q "flask"; then

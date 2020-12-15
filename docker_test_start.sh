@@ -15,4 +15,4 @@ cd $HOME/crowd-task-manager/task_scheduler
 screen -L -Logfile screen_log_task_passthrough -dm -S task_passthrough python3 task_passthrough.py
 
 # Module to view logs of after start-up
-screen -r omr_planner
+screen -r task_scheduler

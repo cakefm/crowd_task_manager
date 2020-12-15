@@ -172,14 +172,24 @@ def take_action_on_status(channel, method, properties, body):
     elif module == 'task_scheduler' and 'task_type' in score_status:
         # Here we should let the CE know some task type has been completed
         task_type = score_status['task_type']
+        url = f"https://github.com/{cfg.github_organization}/{score_name}/tree/{cfg.github_branch}"
+        send_message(
+            {
+                "action": "task group completed",
+                "score_name": score_name,
+                "task_type": task_type,
+                "mei_url": url
+            },
+            cfg.mq_ce_communicator,
+            channel
+        )
         print(f"Completed {task_type} for score {score_name}")
         ack()
     elif module == 'github_init':
-        url = f"https://github.com/{cfg.github_organization}/{score_name}/tree/{cfg.github_branch}"
         # Temporary solution until something better can be found
         # TODO: We need a way to deal with waiting for multiple messages, possibly using the same
         #       delivery-tag method that proper acks will use
-        
+
         # Depending on which of the two finishes sooner, one of them will only send
         if check_dependencies(score_name, {'slicer', 'github_init'}):
             print(
@@ -195,8 +205,6 @@ def take_action_on_status(channel, method, properties, body):
                 cfg.mq_task_scheduler,
                 channel
             )
-
-        # communicate to ce that github repo has been initialized
         ack()
 
 

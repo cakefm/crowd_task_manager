@@ -47,23 +47,26 @@ mq_task_scheduler_status: "task_scheduler_status_queue"
 mq_ce_communicator: "ce_communicator_queue"
 mq_aligner: "aligner_queue"
 mq_form_processor: "form_processor_queue"
+mq_task_passthrough: "task_passthrough_queue"
 
 # Paths
 upload_folder|path: "/omr_files/"
 base_sheet_path|path: "/home/ubuntu/omr_files"
 
 # Github
+delete_if_exists|bool: true  # Delete github repo if it already exists. Mostly for testing, should be off in production to prevent accidental deletions
+only_commit_if_changed|bool: true  # Only commit when there was a change
 github_user: ""
 github_token: ""
 github_organization: ""
 github_branch: ""
-github_commit_count_before_push|int: 5
 
 # Aggregator
 aggregator_xml_threshold|float|0...1: 0.6
 aggregator_form_threshold|float|0...1: 0.6
 
 # Other
+skip_measure_detection|bool: false # Assumes there's a pre-made skeleton present already for the score if true
 use_cert|bool: true
 ce_server: "https://api-test.trompamusic.eu/"
 current_server: ""

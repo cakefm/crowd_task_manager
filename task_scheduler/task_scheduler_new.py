@@ -14,6 +14,7 @@ from task_type import TaskType, Stage
 from task_type import DONE_STEP
 import xml.dom.minidom as xml
 
+
 # TODO: maybe move this away from here, might need to be a method on a slice
 # TODO: Potentially we always need to start from n=1 to make verovio's renderer happy
 #       But we need to keep track of the "n" values to make score rebuilding happen correctly
@@ -46,6 +47,7 @@ def get_slice_context_and_xml(measure_slice):
 
     return section.toxml(), context.toxml()
 
+
 def send_message(message, queue, channel):
     json_str = json.dumps(message)
     channel.queue_declare(queue=queue)
@@ -60,19 +62,21 @@ def take_action(channel, method, properties, body):
     action = message['action']
 
     actions = {
-        "start_next_stage"         : [initialize_stage]
+        "start_next_stage": [initialize_stage]
     }[action]
 
     for action in actions:
         action(message, channel)
 
-def get_task(task_id, retries=3):
+
+def get_task(task_id):
     return db[cfg.col_task].find_one({"_id": ObjectId(task_id)})
+
 
 # Status callback handler
 # spec:
-#   _id     :   the task id 
-#   module  :   module this message was sent from 
+#   _id     :   the task id
+#   module  :   module this message was sent from
 #   status  :   optional, either "complete" or "failed"
 # TODO: change action arguments to include already retrieved task so we don't have to look it up 10+ times
 def take_action_on_status(channel, method, properties, body):
@@ -120,6 +124,7 @@ def take_action_on_status(channel, method, properties, body):
                                                         resubmit
                                                     ],
         ("task_scheduler", "complete"):             [
+                                                        submit_ce_task_completed,
                                                         submit_next_batch,
                                                         check_task_type_completion,
                                                         check_stage_completion
@@ -131,6 +136,21 @@ def take_action_on_status(channel, method, properties, body):
     for action in actions:
         # print(f"Executing {action} triggered by {message}")
         action(message, channel)
+
+
+def submit_ce_task_completed(message, channel):
+    task_id = message["_id"]
+    task = get_task(task_id)
+
+    send_message(
+        {
+            "action": "task completed",
+            "task_id": task_id,
+            "task_type": task["type"]
+        },
+        cfg.mq_ce_communicator,
+        channel
+    )
 
 
 def increment_responses_needed(message, channel):
@@ -155,6 +175,7 @@ def github_commit(message, channel):
         channel
     )
 
+
 def update_task_xml(message, channel):
     task_id = message["_id"]
     task = get_task(task_id)
@@ -172,7 +193,6 @@ def update_task_xml(message, channel):
         new_xml = task["initial_xml"]
 
     db[cfg.col_task].update_one({"_id": ObjectId(task_id)}, {"$set": {"xml": new_xml}})
-
 
 
 def check_stage_completion(message, channel):
@@ -241,7 +261,8 @@ def process_form_output(message, channel):
         },
         cfg.mq_form_processor,
         channel
-    )            
+    )
+
 
 def check_task_type_completion(message, channel):
     task_id = message["_id"]
@@ -269,8 +290,7 @@ def check_task_type_completion(message, channel):
             },
             cfg.mq_omr_planner_status,
             channel
-        )    
-
+        )
 
 
 def submit_next_batch(message, channel):
@@ -307,15 +327,21 @@ def submit_next_batch(message, channel):
         if next_batch:
             submit_batch(next_batch, channel)
 
+
 def submit_batch(batch, channel):
     print(f"Submitting batch: {batch}")
     db[cfg.col_task_batch].update_one({"_id": batch["_id"]}, {"$set": {"submitted": True}})
     for task_id in batch["tasks"]:
         send_message(
-            {'task_id': task_id},
+            {
+                "action": "task created",
+                "task_id": task_id,
+                "task_type": batch["task_type"]
+            },
             cfg.mq_ce_communicator,
             channel
         )
+        send_message({"task_id": task_id}, cfg.mq_task_passthrough, channel)
 
 
 def invalidate_task_results(message, channel):
@@ -325,7 +351,7 @@ def invalidate_task_results(message, channel):
 
 # TODO: should generalize this eventually, to be able to go to any step by name
 def decrement_step(message, channel):
-    task_id = message["_id"]    
+    task_id = message["_id"]
     task = get_task(task_id)
     task_type = task_types[task["type"]]
     current_step = task["step"]
@@ -368,11 +394,10 @@ def resubmit(message, channel):
 
     if current_step != DONE_STEP:
         print(f"Resubmitting task {task_id} for step {current_step}")
-        send_message(
-            {'task_id': task_id},
-            cfg.mq_ce_communicator,
-            channel
-        )
+
+        # Have to think of the implications for the CE here, probably can just keep the task alive
+
+        send_message({"task_id": task_id}, cfg.mq_task_passthrough, channel)
     else:
         # A bit weird, but this is the most convenient solution: send a message to ourselves!
         print(f"Task {task_id} already done, no need to resubmit, notifying task scheduler..")
@@ -385,7 +410,6 @@ def resubmit(message, channel):
             cfg.mq_task_scheduler_status,
             channel
         )
-
 
 
 def send_to_aggregator(message, channel):
@@ -412,8 +436,8 @@ def send_to_aggregator(message, channel):
         if message_key not in message_history:
             # Send to appropriate aggregator
             aggregator_queue = {
-                "form" : cfg.mq_aggregator_form,
-                "xml"  : cfg.mq_aggregator_xml
+                "form": cfg.mq_aggregator_form,
+                "xml": cfg.mq_aggregator_xml
             }[task_type.steps[step]["result_type"]]
 
             aggregator_message = {
@@ -436,6 +460,19 @@ def initialize_stage(message, channel):
     db[cfg.col_task].drop()
     db[cfg.col_task_batch].drop()
     message_history.clear()
+
+    # Send message for task types to CE
+    for task_type in task_types:
+        send_message(
+            {
+                "action": 'task type created',
+                "score_name": score_name,
+                "name": task_type,
+                "title": task_type
+            },
+            cfg.mq_ce_communicator,
+            channel
+        )
 
     print(f"Initializing stage {stage.order} for score {score_name}")
     create_tasks_and_batches_for_stage(stage, score_name)
@@ -547,6 +584,7 @@ def determine_current_stage(score_name):
         if stage.order not in campaign_status["stages_done"]:
             return stage
 
+
 # TODO: Preceeding zeroes in folder names may prevent uniqueness of order
 # the assumption is that the stage order is unique, so this should be enforced or remapped
 def init_task_types_and_stages(db):
@@ -568,6 +606,7 @@ def init_task_types_and_stages(db):
         prev_stage = stage
     return stages, task_types
 
+
 if __name__ == "__main__":
     # Connect to db
     mongo_client = MongoClient(*cfg.mongodb_address)
@@ -584,8 +623,8 @@ if __name__ == "__main__":
     # Connect to mq and set up callbacks
     parameters = pika.ConnectionParameters(*cfg.rabbitmq_address)
     connection = pika.BlockingConnection(parameters)
-
     channel = connection.channel()
+    task_types[2] = 3
     channel.queue_declare(queue=cfg.mq_task_scheduler)
     channel.queue_declare(queue=cfg.mq_task_scheduler_status)
     channel.basic_consume(

@@ -123,10 +123,10 @@ if __name__ == "__main__":
     parameters = pika.ConnectionParameters(*cfg.rabbitmq_address)
     connection = pika.BlockingConnection(parameters)
     channel = connection.channel()
-    channel.queue_declare(queue=cfg.mq_ce_communicator)
+    channel.queue_declare(queue=cfg.mq_task_passthrough)
     channel.basic_consume(
         on_message_callback=callback, 
-        queue=cfg.mq_ce_communicator, 
+        queue=cfg.mq_task_passthrough, 
         auto_ack=True
     )
 

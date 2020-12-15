@@ -25,7 +25,7 @@ class TaskType():
             self.slice_type, slice_tuple_size = self.slice_type.split(":")
             self.slice_tuple_size = int(slice_tuple_size)
         self.db = db
-    
+
     def get_slice_query(self, score):
         slice_query = {
             "score": score,
@@ -44,7 +44,7 @@ class TaskType():
         required_slices = self.db[cfg.col_slice].count_documents(self.get_slice_query(score))
         completed_tasks = self.db[cfg.col_task].count_documents({"type": self.name, "step": DONE_STEP})
         return 0 if required_slices == 0 else completed_tasks / required_slices
-    
+
     # Only store information that we might need in other places than the task scheduler
     # we can easily read the task types in anyway and this gets done on startup in task scheduler
     def to_db_dict(self):
@@ -68,7 +68,7 @@ class Stage():
         self.previous_stage = previous_stage
 
     def get_task_type_progress(self, score):
-        return {tt.name:tt.get_progress(score) for tt in self.task_types}
+        return {tt.name: tt.get_progress(score) for tt in self.task_types}
 
     def is_complete(self, score):
         return all([tt.is_complete(score) for tt in self.task_types])
