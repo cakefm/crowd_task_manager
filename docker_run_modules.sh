@@ -103,18 +103,17 @@ if ! screen -list | grep -q "form_processor"; then
     screen -L -Logfile screen_log -dm -S form_processor python3 form_processor_mq.py
 fi
 
+if ! screen -list | grep -q "github_init"; then
+    echo 'starting github_init'
+    cd $HOME/crowd-task-manager/github
+    screen -L -Logfile screen_log_init -dm -S github_init python3 github_init_mq.py
+fi
 
-# if ! screen -list | grep -q "github_init"; then
-#     echo 'starting github_init'
-#     cd $HOME/crowd-task-manager/github
-#     screen -dm -S github_init bash -c 'python3 github_init_mq.py'
-# fi
-
-# if ! screen -list | grep -q "github_update"; then
-#     echo 'starting github_update'
-#     cd $HOME/crowd-task-manager/github
-#     screen -dm -S github_update bash -c 'python3 github_update_mq.py'
-# fi
+if ! screen -list | grep -q "github_update"; then
+    echo 'starting github_update'
+    cd $HOME/crowd-task-manager/github
+    screen -L -Logfile screen_log_update -dm -S github_update python3 github_update_mq.py
+fi
 
 if ! screen -list | grep -q "flask"; then
      echo 'starting flask api.py'

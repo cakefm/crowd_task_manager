@@ -81,58 +81,50 @@ def take_action_on_status(channel, method, properties, body):
     # TODO: task status queue spec needs to be cleared up, so we can factor out actions
     status = message.get('status', None)
 
-    def log_status(message, channel):
-        print(f"from {message['module']}: {message}")
-    
+    print(f"from {message['module']}: {message}")
+
     # TODO: rewrite back to if/else again, this is hell for debugging
     # TODO: split "checks" from "actions", makes code more readable and predictable
     actions = {
         ("api", None):                              [
-                                                        log_status,
                                                         send_to_aggregator
                                                     ],
         ("aggregator_xml",  "complete"):            [
-                                                        log_status,
                                                         rebuild_score,
                                                         update_task_xml
                                                     ],
         ("aggregator_xml",  "failed"):              [
-                                                        log_status,
                                                         increment_responses_needed,
                                                         resubmit
                                                     ],
         ("score_rebuilder", "complete"):            [
-                                                        log_status,
                                                         github_commit,
                                                         increment_step,
                                                         resubmit
                                                     ],
         ("aggregator_form", "complete"):            [
-                                                        log_status,
                                                         process_form_output
                                                     ],
         ("aggregator_form", "failed"):              [
-                                                        log_status,
                                                         increment_responses_needed,
                                                         resubmit
                                                     ],
         ("form_processor", "verification-passed"):  [
-                                                        log_status,
                                                         increment_step,
                                                         resubmit
                                                     ],
         ("form_processor", "verification-failed"):  [
-                                                        log_status,
                                                         invalidate_task_results,
                                                         decrement_step,
                                                         update_task_xml,
                                                         resubmit
                                                     ],
         ("task_scheduler", "complete"):             [
-                                                        log_status,
                                                         submit_next_batch,
                                                         check_task_type_completion,
                                                         check_stage_completion
+                                                    ],
+        ("github_update", "complete"):              [
                                                     ]
     }[(module, status)]
 
@@ -156,6 +148,7 @@ def github_commit(message, channel):
         {
             'task_id': task_id,
             'action': 'commit',
+            'mei': fsm.get_mei_contents(score_name), # We need to do this, or otherwise the commits won't sync up properly with the rest of the system
             'name': score_name
         },
         cfg.mq_github,

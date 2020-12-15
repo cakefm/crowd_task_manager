@@ -6,14 +6,13 @@ import json
 import gc
 
 from github import Github
+from github import GithubException
 from pymongo import MongoClient
 
 sys.path.append("..")
 from common.settings import cfg
 import common.file_system_manager as fsm
 from github_common import commit, push
-
-
 
 def callback(ch, method, properties, body):
     data = json.loads(body)
@@ -27,6 +26,17 @@ def callback(ch, method, properties, body):
     # Github
     github = Github(cfg.github_token)
     org = github.get_organization(cfg.github_organization)
+
+    if cfg.delete_if_exists:
+        try:
+            org.get_repo(sheet_name).delete()
+        except GithubException as e:
+            print("Repo doesn't exist, ready for creation!")
+            print(str(e))
+        # if "name already exists on this account" in str(e):
+
+    # TODO: Handling this properly requires offline functionality for the git-repo, meaning we have to
+    #       create it without relying on Github and then link it if possible
     repo = org.create_repo(sheet_name, description=f"Repository for {sheet_name}", auto_init=True)
 
     # Git
@@ -54,7 +64,7 @@ def callback(ch, method, properties, body):
     # Protect the newly created/pushed branch and the main branch on Github
     repo.get_branch("main").edit_protection(user_push_restrictions=[cfg.github_user])
     repo.get_branch(cfg.github_branch).edit_protection(user_push_restrictions=[cfg.github_user])
-    
+
     # Clean up (needed since pygit2 tends to leave files in .git open)
     del clone
     del branch
@@ -63,10 +73,10 @@ def callback(ch, method, properties, body):
 
     # Update status
     status_update_msg = {
-    '_id': sheet_id,
-    'module': 'github_init',
-    'status': 'complete',
-    'name': sheet_name
+        '_id': sheet_id,
+        'module': 'github_init',
+        'status': 'complete',
+        'name': sheet_name
     }
 
     global channel

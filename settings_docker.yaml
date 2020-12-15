@@ -45,7 +45,8 @@ github_user: ""
 github_token: ""
 github_organization: ""
 github_branch: ""
-github_commit_count_before_push|int: 5
+delete_if_exists|bool: true  # Delete github repo if it already exists. Mostly for testing, should be off in production to prevent accidental deletions
+only_commit_if_changed|bool: true  # Only commit when there was a change
 
 # Aggregator
 aggregator_xml_threshold|float|0...1: 0.6
