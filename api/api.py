@@ -88,7 +88,9 @@ def get_task_query(variable):
     mycol = mydb[cfg.col_task]
     myquery = {"_id": ObjectId(variable)}
     mydoc = mycol.find_one(myquery)
-    return json.dumps(mydoc)
+    del mydoc["_id"]
+    del mydoc["batch_id"]
+    return json.dumps()
 
 
 # display task info, slice, and xml
