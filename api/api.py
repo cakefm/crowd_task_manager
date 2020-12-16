@@ -88,19 +88,7 @@ def get_task_query(variable):
     mycol = mydb[cfg.col_task]
     myquery = {"_id": ObjectId(variable)}
     mydoc = mycol.find_one(myquery)
-    task = {}
-    task['task_id'] = variable
-    task['image_url'] = CURRENT_SERVER + 'static/' + mydoc['image_path']
-    task['mei_snippet'] = mydoc['xml']
-
-    mycol = mydb[cfg.col_task_context]
-    myquery = {"task_id": variable}
-    mydoc = mycol.find_one(myquery)
-    task['preface'] = mydoc['preface']
-    task['postface'] = mydoc['postface']
-
-    # resp = jsonify(task=task)
-    return task
+    return json.dumps(mydoc)
 
 
 # display task info, slice, and xml
