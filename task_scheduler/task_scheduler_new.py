@@ -478,7 +478,7 @@ def send_to_aggregator(message, channel):
 
             print(f"Sent message to {aggregator_queue}: {aggregator_message}")
             send_message(aggregator_message, aggregator_queue, channel)
-            message_history.get_task_urladd(message_key)
+            message_history.add(message_key)
 
 # Determine the stage that should be currently worked on and create the required tasks and batches for it
 def initialize_stage(message, channel):
