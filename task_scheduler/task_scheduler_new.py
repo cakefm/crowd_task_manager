@@ -48,10 +48,17 @@ def get_slice_context_and_xml(measure_slice):
     return section.toxml(), context.toxml()
 
 
+def update_task_url(task_id):
+    task = get_task(task_id)
+    url = f"{cfg.cfg.current_server}/{task['type']}/{task['step']}/{task_id}"
+    db[cfg.col_task].update_one({"_id": ObjectId(task_id)}, {"$set": {"url": url}})
+
+
 def send_message(message, queue, channel):
     json_str = json.dumps(message)
     channel.queue_declare(queue=queue)
     channel.basic_publish(exchange="", routing_key=queue, body=json_str)
+
 
 # Main callback handler, for communication with OMRP among other things
 # spec:
@@ -146,6 +153,27 @@ def submit_ce_task_completed(message, channel):
         {
             "action": "task completed",
             "task_id": task_id,
+            "task_type": task["type"]
+        },
+        cfg.mq_ce_communicator,
+        channel
+    )
+
+
+def republish_ce_task(task, channel):
+    send_message(
+        {
+            "action": "task completed",
+            "task_id": str(task["_id"]),
+            "task_type": task["type"]
+        },
+        cfg.mq_ce_communicator,
+        channel
+    )
+    send_message(
+        {
+            "action": "task created",
+            "task_id": str(task["_id"]),
             "task_type": task["type"]
         },
         cfg.mq_ce_communicator,
@@ -365,11 +393,13 @@ def decrement_step(message, channel):
     except StopIteration:
         previous_step = task_type.steps[0]
 
+    update_task_url(task_id)
     print(f"Decrementing step from {current_step} to {previous_step} for task {task_id}")
     db[cfg.col_task].update_one({"_id": ObjectId(task_id)}, {"$set": {"step": previous_step}})
 
+
 def increment_step(message, channel):
-    task_id = message["_id"]    
+    task_id = message["_id"]
     task = get_task(task_id)
     task_type = task_types[task["type"]]
     current_step = task["step"]
@@ -383,12 +413,13 @@ def increment_step(message, channel):
     except StopIteration:
         next_step = DONE_STEP
 
+    update_task_url(task_id)
     print(f"Advancing step from {current_step} to {next_step} for task {task_id}")
     db[cfg.col_task].update_one({"_id": ObjectId(task_id)}, {"$set": {"step": next_step}})
 
 
 def resubmit(message, channel):
-    task_id = message["_id"]    
+    task_id = message["_id"]
     task = get_task(task_id)
     current_step = task["step"]
 
@@ -396,6 +427,7 @@ def resubmit(message, channel):
         print(f"Resubmitting task {task_id} for step {current_step}")
 
         # Have to think of the implications for the CE here, probably can just keep the task alive
+        republish_ce_task(task, channel)
 
         send_message({"task_id": task_id}, cfg.mq_task_passthrough, channel)
     else:
@@ -446,7 +478,7 @@ def send_to_aggregator(message, channel):
 
             print(f"Sent message to {aggregator_queue}: {aggregator_message}")
             send_message(aggregator_message, aggregator_queue, channel)
-            message_history.add(message_key)
+            message_history.get_task_urladd(message_key)
 
 # Determine the stage that should be currently worked on and create the required tasks and batches for it
 def initialize_stage(message, channel):
@@ -489,6 +521,7 @@ def send_first_batches(stage, score_name, channel):
         next_batch = db[cfg.col_task_batch].find_one(key, sort=[('priority', pymongo.ASCENDING)])
         submit_batch(next_batch, channel)
 
+
 def create_tasks_and_batches_for_stage(stage, score_name):
     for task_type in stage.task_types:
         print(" ", f"Creating tasks for {task_type}")
@@ -511,9 +544,10 @@ def create_tasks_and_batches_for_stage(stage, score_name):
                 'step': first_step,
                 'initial_xml': xml,
                 'xml': xml,
+                'url': None,  # Gets assigned later
                 'context': context,
                 'responses_needed': task_type.steps[first_step]["min_responses"],
-                'batch_id': None, # Gets assigned later,
+                'batch_id': None,  # Gets assigned later,
                 'stage': stage.order
             }
 
@@ -530,6 +564,8 @@ def create_tasks_and_batches_for_stage(stage, score_name):
             task_id = entry.upserted_id
             if not task_id:
                 task_id = db[cfg.col_task].find_one(key)["_id"]
+
+            update_task_url(str(task_id))
             task_ids.append(task_id)
 
             copyfile(slice_location, copy_destination)
@@ -559,7 +595,7 @@ def create_batches_from_tasks(task_ids, task_type, score_name):
             "priority": batch_priority,
             "task_type": task_type.name,
             "score": score_name,
-            "tasks" : task_batches[batch_priority],
+            "tasks": task_batches[batch_priority],
             "submitted": False  # Need this to ensure we don't submit the same batch multiple times
         }
 
