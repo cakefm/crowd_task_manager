@@ -15,6 +15,7 @@ col_task_context: "task_context"
 col_submitted_task: "submitted_tasks"
 col_task_type: "task_types"
 col_task_batch: "task_batches"
+col_campaign_status: "campaign_status"
 
 # Rabbit MQ
 mq_new_item: "measure_detector_queue"
@@ -33,6 +34,8 @@ mq_task_scheduler: "task_scheduler_queue"
 mq_task_scheduler_status: "task_scheduler_status_queue"
 mq_ce_communicator: "ce_communicator_queue"
 mq_aligner: "aligner_queue"
+mq_form_processor: "form_processor_queue"
+mq_task_passthrough: "task_passthrough_queue"
 
 # Paths
 upload_folder|path: "/omr_files/"
@@ -43,13 +46,16 @@ github_user: ""
 github_token: ""
 github_organization: ""
 github_branch: ""
-github_commit_count_before_push|int: 5
+delete_if_exists|bool: true  # Delete github repo if it already exists. Mostly for testing, should be off in production to prevent accidental deletions
+only_commit_if_changed|bool: true  # Only commit when there was a change
+github_enable|bool: true
 
 # Aggregator
 aggregator_xml_threshold|float|0...1: 0.6
 aggregator_form_threshold|float|0...1: 0.6
 
 # Other
+skip_measure_detection|bool: false # Assumes there's a pre-made skeleton present already for the score if true
 use_cert|bool: false
 ce_server: "https://api-test.trompamusic.eu/" # Should be dummy server
 current_server: ""

@@ -181,7 +181,7 @@ def create_task_group(score_name, name, title):
         "score_name": score_name,
         "controlaction_id": ce_id,
         "digitaldocument_id": digitaldocument_id,
-        "name": name, 
+        "name": name,
         "title": title
     }
     entry = mycol.insert_one(result).inserted_id
@@ -204,6 +204,7 @@ def create_task(task_id, task_type):
     result = mycol.find_one(query)
     score_name = result['score']
     name = result['name']
+    task_url = result['url']
 
     mycol = mydb["ce_taskgroups"]
     query = {'score_name': score_name, 'name': task_type}
@@ -228,8 +229,8 @@ def create_task(task_id, task_type):
         "ce_identifier": ce_task_id,
         "task_id": task_id,
         "digitaldocument_id": digitaldocument_id,
-        "name": name, 
-        "title": title
+        "name": name,
+        "title": name
     }
     entry = mycol.insert_one(result).inserted_id
     # print(response.text)

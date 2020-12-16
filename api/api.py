@@ -153,18 +153,16 @@ def task_xml(variable):
 # receive xml data
 @app.route('/<variable>', methods=['POST'])
 def taskpost(variable):
-    myclient = pymongo.MongoClient(MONGO_SERVER.ip, MONGO_SERVER.port)
+    myclient = pymongo.MongoClient(*MONGO_SERVER)
     mydb = myclient[MONGO_DB]
     mycol = mydb[cfg.col_result]
+    task = mydb[cfg.col_task].find_one({"_id": ObjectId(variable)})
     opinion = 'xml' if 'v' not in request.args else (request.args['v'] == "1")
     result_type = "verify" if 'v' in request.args else "edit"
     result = {
         "task_id": variable,
-        "xml": str(request.get_data(as_text=True)),
-        "ts": datetime.now(),
-        "worker": "somebody" if 'u' not in request.args else request.args['u'],
-        "result_type": "verify" if 'v' in request.args else "edit",
-        "opinion": 'xml' if 'v' not in request.args else (request.args['v'] == "1")
+        "result": str(request.get_data(as_text=True)),
+        "step": task["step"],
     }
     mycol.insert_one(result)
 
@@ -174,7 +172,7 @@ def taskpost(variable):
         json.dumps({
             'action': 'result',
             'module': 'api',
-            'identifier': variable,
+            '_id': variable,
             'type': result_type}))
 
     # # check if the task is complete

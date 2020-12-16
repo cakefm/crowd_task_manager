@@ -34,6 +34,14 @@ def get_sheet_whole_directory(sheet_name:str):
     file_path.mkdir(parents=True, exist_ok=True)
     return file_path
 
+def get_mei_contents(sheet_name:str):
+    '''
+    Gets the current contents of the score's mei as a string
+    '''
+    mei = get_sheet_whole_directory(sheet_name) / 'aligned.mei'
+    with open(mei, 'r') as f:
+        return f.read()
+
 def get_sheet_base_directory(sheet_name:str):
     '''
     Get the path to the root of the given sheet's directory

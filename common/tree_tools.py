@@ -17,8 +17,27 @@ def create_element_node(name, attributes = dict()):
     '''
     node = xml.parseString(f"<{name}/>").documentElement
     for key in attributes:
-        node.setAttribute(key, attributes[key])
+        node.setAttribute(str(key), str(attributes[key]))
     return node
+
+def matching_pairs(sequence_1, sequence_2, attribute_names):
+    '''
+    Match two sequences on attributes in order to create a list with matching pairs.
+
+    Arguments:
+        sequence_1 (list<Node>)               -- A list with nodes
+        sequence_2 (list<Node>)               -- A list with nodes
+        attribute_names (list<str>)           -- A list with attribute names
+
+    Returns:
+        list (List<Node, Node>)               -- List for matching pairs
+    '''
+    pairs = []
+    for a in sequence_1:
+        for b in sequence_2:
+            if all([a.getAttribute(attr) == b.getAttribute(attr) for attr in attribute_names]):
+                pairs.append((a, b))
+    return pairs
 
 def filter_element_nodes(sequence):
     '''
@@ -83,17 +102,21 @@ def traverse_tree(tree, depth_first=True, filter_function=node_type_filter(xml.N
         yield indexed_node
 
 
-def insert_node(tree, path, node):
+def insert_node(tree, path, node, append=False):
     '''
     Inserts a given node into the given (sub) tree at the given path. The path indicates
     the next child node to take while traversing down the tree. The last element of the path
     indicates where to insert the given node; as such the path must be non-empty.
     Will throw an exception if it cannot traverse the given path at any point.
 
+    If `append` is `True`, it will instead append to the children of the last node
+    specified by the path.
+
     Arguments:
         tree (Node)                         -- The root node of an XML tree
         path (list<int>)                    -- The path to insert the node at (non-empty)
         node (Node)                         -- The element node to insert
+        append (bool)                       -- Whether to append to children instead
 
     Returns:
         modified_tree (Node)                -- A copy of the tree with the inserted node
@@ -102,11 +125,16 @@ def insert_node(tree, path, node):
     sub_tree = root
     for depth, index in enumerate(path):
         if len(filter_element_nodes(sub_tree.childNodes)) <= index:
-            raise IndexError(f"Cannot insert node at depth {depth} of path {path}, child node sequence only has {len(filter_element_nodes(sub_tree.childNodes))} element nodes while attempting to insert at {index}.")
+            raise IndexError(f"Cannot insert node at depth {depth} of path {path}, child node sequence only has {len(filter_element_nodes(sub_tree.childNodes))} element nodes while attempting to insert at {index}.\n Tree:\n {root.toprettyxml()}")
         sub_tree = filter_element_nodes(sub_tree.childNodes)[index]
-    sub_tree.parentNode.insertBefore(node, sub_tree)
+
+    if append:
+        sub_tree.appendChild(node)
+    else:
+        sub_tree.parentNode.insertBefore(node, sub_tree)
+
     return root
-        
+
 def insert_node_with_extension(tree, path, node, extension_node):
     '''
     Inserts a given node into the given (sub) tree at the given path. The path indicates

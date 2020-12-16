@@ -6,7 +6,7 @@ sys.path.append("..")
 from common.settings import cfg
 import common.file_system_manager as fsm
 
-import measure_detector.folder_to_mei as to_mei
+import measure_detector.folder_to_mei_imgmd as to_mei
 
 from pymongo import MongoClient
 from bson.objectid import ObjectId

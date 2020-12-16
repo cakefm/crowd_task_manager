@@ -19,19 +19,22 @@ def callback(ch, method, properties, body):
     data = json.loads(body)
     sheet_name = data['name']
     task_id = data['task_id']
+    action = data['action']
 
     # Get sheet id
     client = MongoClient(cfg.mongodb_address.ip, cfg.mongodb_address.port)
     db = client[cfg.db_name]
     sheet_id = str(db[cfg.col_sheet].find_one({"name" : sheet_name})["_id"])
 
-    # Get task name
-    task_name = db[cfg.col_task].find_one(ObjectId(task_id))["name"]
+    # Get task info
+    task = db[cfg.col_task].find_one(ObjectId(task_id))
+    task_name = task["name"]
+    task_type = task["type"]
 
-    # Github
-    github = Github(cfg.github_token)
-    org = github.get_organization(cfg.github_organization_name)
-    repo = org.get_repo(sheet_name)
+    # # Github
+    # github = Github(cfg.github_token)
+    # org = github.get_organization(cfg.github_organization_name)
+    # repo = org.get_repo(sheet_name)
 
     # Git
     git_dir_path = fsm.get_sheet_git_directory(sheet_name)
@@ -40,21 +43,30 @@ def callback(ch, method, properties, body):
     # CAUTION: The assumption is that NOONE ever edits the crowd manager's branch except for the crowdmanager itself
     # Thus no need to deal with fast-forwarding or merge conflicts
     clone.remotes[0].fetch()
-    branch = clone.lookup_branch(cfg.github_branch_name)
+    branch = clone.lookup_branch(cfg.github_branch)
     ref = clone.lookup_reference(branch.name)
     clone.checkout(ref)
 
-    # Copy over new MEI
-    mei_path = fsm.get_sheet_whole_directory(sheet_name) / "aligned.mei"
-    shutil.copy(str(mei_path), str(fsm.get_sheet_git_directory(sheet_name)))
-    commit(clone, f"Update MEI with results from task {task_name}", branch=cfg.github_branch_name)
+    if action=="commit":
+        mei_data = data['mei']
+        changed = True
+        git_mei_path = fsm.get_sheet_git_directory(sheet_name) / "aligned.mei"
 
-    # Only push when we have sufficient commits
-    global commit_counter
-    commit_counter += 1
-    if commit_counter >= cfg.github_commit_count_before_push:
-        push(clone, branch=cfg.github_branch_name)
-        commit_counter = 0
+        with open(str(git_mei_path), 'r') as mei_file:
+            if mei_file.read() == mei_data:
+                changed = False
+
+        if (cfg.only_commit_if_changed and changed) or not cfg.only_commit_if_changed:
+            # Copy over new MEI
+            with open(str(git_mei_path), 'w') as mei_file:
+                mei_file.write(mei_data)
+            commit(clone, f"Update MEI with task {task_name} of type {task_type}", branch=cfg.github_branch)
+            print(f"Made commit to repo for task {task_id}")
+        else:
+            print(f"No commit/write made, task {task_id} had no changes")
+    elif action=="push":
+        push(clone, branch=cfg.github_branch)
+        print(f"Made push to repo for task {task_id}")
 
     # Clean up (needed since pygit2 tends to leave files in .git open)
     del clone
@@ -64,15 +76,15 @@ def callback(ch, method, properties, body):
 
     # Update status
     status_update_msg = {
-    '_id': sheet_id,
-    'module': 'github_update',
-    'status': 'complete',
-    'name': sheet_name
+        '_id': sheet_id,
+        'module': 'github_update',
+        'status': 'complete',
+        'name': sheet_name
     }
 
     global channel
-    channel.queue_declare(queue=cfg.mq_omr_planner_status)
-    channel.basic_publish(exchange="", routing_key=cfg.mq_omr_planner_status, body=json.dumps(status_update_msg))
+    channel.queue_declare(queue=cfg.mq_task_scheduler_status)
+    channel.basic_publish(exchange="", routing_key=cfg.mq_task_scheduler_status, body=json.dumps(status_update_msg))
 
 
 commit_counter = 0

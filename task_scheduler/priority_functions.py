@@ -9,4 +9,5 @@ def page_order(task_id, db):
     task_slice = db[cfg.col_slice].find_one({"_id": ObjectId(task["slice_id"])})
     score = db[cfg.col_score].find_one({"name": task_slice["score"]})
     first_measure = score["measures"][task_slice["start"]]
-    return first_measure["page_index"]
+    staff = first_measure["staffs"][task_slice["staff_start"]]
+    return staff["page_index"]

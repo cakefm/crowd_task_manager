@@ -10,22 +10,23 @@ import common.tree_alignment as ta
 import xml.dom.minidom as xml
 
 from pymongo import MongoClient
+from bson.objectid import ObjectId
 
 
 def callback(ch, method, properties, body):
-    data = json.loads(body)
-    task_id = data['task_id']
-
     client = MongoClient(*cfg.mongodb_address)
     db = client[cfg.db_name]
 
-    results = []
+    data = json.loads(body)
+    task_id = data['task_id']
+    task = db[cfg.col_task].find_one({"_id": ObjectId(task_id)})
 
-    results_json = db[cfg.col_result].find({
+    results = []
+    results_query = db[cfg.col_result].find({
         "task_id": task_id,
-        "result_type": "edit"})
-    for thing in results_json:
-        results.append(thing['xml'])
+        "step": task["step"]})
+    for result in results_query:
+        results.append(result['result'])
 
     # results = db[cfg.col_result].find({"task_id" : task_id})
 
@@ -49,9 +50,10 @@ def callback(ch, method, properties, body):
         results_agg_coll = db[cfg.col_aggregated_result]
         result_agg = {
             'task_id': task_id,
-            'xml': str(final_tree.toprettyxml())
+            'result': str(final_tree.toprettyxml()),
+            'step': task["step"]
         }
-        results_agg_coll.update_one({'task_id': task_id}, {'$set': result_agg}, True)
+        results_agg_coll.update_one({'task_id': task_id}, {'$set': result_agg}, upsert=True)
 
     global channel
     channel.queue_declare(queue=cfg.mq_task_scheduler_status)

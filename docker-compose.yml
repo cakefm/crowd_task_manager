@@ -20,10 +20,6 @@ services:
       - "15672:15672"
     logging:
       driver: none
-  measure-detector:
-    build: https://github.com/cemfi/measure-detector.git
-    expose:
-      - 8000
   trompa:
     build: .
     ports:
@@ -31,9 +27,8 @@ services:
     depends_on:
       - mongo
       - rabbitmq
-      - measure-detector
-    command:  sh -c "./wait && ./docker_start.sh"
+    command:  sh -c "./wait && ./docker_test_start.sh"
     tty: true
     privileged: true
     environment:
-      WAIT_HOSTS: mongo:27017, rabbitmq:5672, measure-detector:8000
+      WAIT_HOSTS: mongo:27017, rabbitmq:5672
