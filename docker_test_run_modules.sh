@@ -58,5 +58,5 @@ fi
 if ! screen -list | grep -q "flask"; then
      echo 'starting flask api.py'
      cd $HOME/crowd-task-manager/api
-     screen -dm -S flask python3 api.py
+     screen -L -Logfile screen_log -dm -S flask python3 api.py
 fi
