@@ -48,6 +48,7 @@ github_organization: ""
 github_branch: ""
 delete_if_exists|bool: true  # Delete github repo if it already exists. Mostly for testing, should be off in production to prevent accidental deletions
 only_commit_if_changed|bool: true  # Only commit when there was a change
+github_enable|bool: true
 
 # Aggregator
 aggregator_xml_threshold|float|0...1: 0.6

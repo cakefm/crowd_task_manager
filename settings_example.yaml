@@ -56,6 +56,7 @@ base_sheet_path|path: "/home/ubuntu/omr_files"
 # Github
 delete_if_exists|bool: true  # Delete github repo if it already exists. Mostly for testing, should be off in production to prevent accidental deletions
 only_commit_if_changed|bool: true  # Only commit when there was a change
+github_enable|bool: true
 github_user: ""
 github_token: ""
 github_organization: ""
@@ -68,7 +69,7 @@ aggregator_form_threshold|float|0...1: 0.6
 # Other
 skip_measure_detection|bool: false # Assumes there's a pre-made skeleton present already for the score if true
 use_cert|bool: true
-ce_server: "https://api-test.trompamusic.eu/"
+ce_server: ""
 current_server: ""
 entrypoint_id: ""
 processing_potentialaction_id: ""

@@ -136,7 +136,7 @@ def take_action_on_status(channel, method, properties, body):
         if campaign_status["finished"]:
             print(f"Campaign for {score_name} has finished, no need to do more tasks")
         else:
-            if check_dependencies(score_name, {'slicer', 'github_init'}):
+            if check_dependencies(score_name, {'slicer', 'github_init'}) or not cfg.github_enable:
                 print(
                     datetime.now(),
                     'sending ',
@@ -191,7 +191,7 @@ def take_action_on_status(channel, method, properties, body):
         #       delivery-tag method that proper acks will use
 
         # Depending on which of the two finishes sooner, one of them will only send
-        if check_dependencies(score_name, {'slicer', 'github_init'}):
+        if check_dependencies(score_name, {'slicer', 'github_init'}) and cfg.github_enable:
             print(
                 datetime.now(),
                 'sending ',
