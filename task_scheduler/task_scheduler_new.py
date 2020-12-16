@@ -50,7 +50,7 @@ def get_slice_context_and_xml(measure_slice):
 
 def update_task_url(task_id):
     task = get_task(task_id)
-    url = f"{cfg.cfg.current_server}/{task['type']}/{task['step']}/{task_id}"
+    url = f"{cfg.current_server}/{task['type']}/{task['step']}/{task_id}"
     db[cfg.col_task].update_one({"_id": ObjectId(task_id)}, {"$set": {"url": url}})
 
 
