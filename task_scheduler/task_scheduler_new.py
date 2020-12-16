@@ -636,7 +636,7 @@ def init_task_types_and_stages(db):
     task_types = {}
     prev_stage = None
     get_order = lambda path: int(path.stem.split("_")[0])
-    for stage_path in sorted(fsm.get_task_types_directory().iterdir(), key=get_order):
+    for stage_path in sorted([x for x in fsm.get_task_types_directory().iterdir() if x.is_dir()], key=get_order):
         task_types_stage = set()
         for task_type_path in stage_path.iterdir():
             if (task_type_path.suffix == '.yaml'):
