@@ -90,7 +90,7 @@ def get_task_query(variable):
     mydoc = mycol.find_one(myquery)
     del mydoc["_id"]
     del mydoc["batch_id"]
-    return json.dumps()
+    return json.dumps(mydoc)
 
 
 # display task info, slice, and xml
