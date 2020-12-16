@@ -27,7 +27,7 @@ services:
     depends_on:
       - mongo
       - rabbitmq
-    command:  sh -c "./wait && ./docker_start.sh"
+    command:  sh -c "./wait && ./docker_test_start.sh"
     tty: true
     privileged: true
     environment:

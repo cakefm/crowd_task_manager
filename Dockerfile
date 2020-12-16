@@ -15,7 +15,7 @@ RUN pip3 install -r $HOME/crowd-task-manager/requirements.txt
 
 # Copy over project
 COPY . /root/crowd-task-manager
-COPY ./settings_docker.yaml /root/crowd-task-manager/settings.yaml
+COPY ./settings_docker_test.yaml /root/crowd-task-manager/settings.yaml
 WORKDIR /root/crowd-task-manager/
 
 # Add docker-compose-wait tool -------------------
