@@ -92,6 +92,8 @@ def take_action_on_status(channel, method, properties, body):
     # TODO: task status queue spec needs to be cleared up, so we can factor out actions
     status = message.get('status', None)
 
+    print(f"from {message['module']}: {message}")
+
     # Temporary solution to prevent tasks that are done from ever going beyond this point
     # just to prevent the task manager from crashing while testing functionality
     task_id = message["_id"]
@@ -99,9 +101,6 @@ def take_action_on_status(channel, method, properties, body):
     if task["step"] == DONE_STEP:
         print(f"Task {task_id} was done already, should not respond to this task")
         return
-
-
-    print(f"from {message['module']}: {message}")
 
     # TODO: rewrite back to if/else again, this is hell for debugging
     # TODO: split "checks" from "actions", makes code more readable and predictable
