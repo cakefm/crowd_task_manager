@@ -94,16 +94,15 @@ def take_action_on_status(channel, method, properties, body):
 
     print(f"from {message['module']}: {message}")
 
-    # Temporary solution to prevent tasks that are done from ever going beyond this point
-    # just to prevent the task manager from crashing while testing functionality
+    # TODO: should probably get rid of the "DONE_STEP" idea somehow, it has too much potential to break things,
+    #       maybe use a different field in the task
     task_id = message["_id"]
     task = get_task(task_id)
-    if task["step"] == DONE_STEP:
-        print(f"Task {task_id} was done already, should not respond to this task")
-        return
+    if task["step"] == DONE_STEP and module != "task_scheduler":
+        print(f"WARNING: Got message after {task_id} was done already from a module other than task_schedueler {module}")
 
     # TODO: rewrite back to if/else again, this is hell for debugging
-    # TODO: split "checks" from "actions", makes code more readable and predictable
+    # TODO: split "checks" from "actions", makes code more readable and predictable and allows for more control flow
     actions = {
         ("api", None):                              [
                                                         send_to_aggregator
@@ -473,7 +472,7 @@ def send_to_aggregator(message, channel):
         # 4.) The messages afterwards cause task scheduler to send again while the aggregator had long finished
         # Basically this happens when the aggregator is faster at aggregating than the task_scheduler at processing the queue
         message_key = (task_id, result_ids, "aggregator")
-        if message_key not in message_history:
+        if message_key not in message_history and step in task_type.steps:
             # Send to appropriate aggregator
             aggregator_queue = {
                 "form": cfg.mq_aggregator_form,
