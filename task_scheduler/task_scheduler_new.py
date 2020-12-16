@@ -639,12 +639,13 @@ def init_task_types_and_stages(db):
     for stage_path in sorted(fsm.get_task_types_directory().iterdir(), key=get_order):
         task_types_stage = set()
         for task_type_path in stage_path.iterdir():
-            with open(task_type_path) as f:
-                name = f"{stage_path.stem}_{task_type_path.stem}"
-                t = yaml.safe_load(f)
-                task_type = TaskType(name, t, db)
-                task_types[name] = task_type
-                task_types_stage.add(task_type)
+            if (task_type_path.suffix == '.yaml'):
+                with open(task_type_path) as f:
+                    name = f"{stage_path.stem}_{task_type_path.stem}"
+                    t = yaml.safe_load(f)
+                    task_type = TaskType(name, t, db)
+                    task_types[name] = task_type
+                    task_types_stage.add(task_type)
         stage = Stage(get_order(stage_path), task_types_stage, prev_stage)
         stages.append(stage)
         prev_stage = stage
