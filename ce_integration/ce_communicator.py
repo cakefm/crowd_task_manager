@@ -325,6 +325,7 @@ def main():
                         host=RABBITMQ_ADDRESS,
                         port=RABBITMQ_PORT))
                 channel = connection.channel()
+                channel.queue_declare(queue=cfg.mq_ce_communicator)
                 method_frame, header_frame, body = channel.basic_get(cfg.mq_ce_communicator)
                 if method_frame:
                     print(datetime.now(), str(body, 'utf-8'))
