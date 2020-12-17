@@ -211,11 +211,15 @@ def copy_gaps(tree1, tree2):
 
 
 def consensus_best_node_distance(nodes, distance_function=node_distance):
+    print("performing consensus check for nodes: ")
+    [print("-", x.tagName) for x in nodes]
     node_distances = np.full((len(nodes), len(nodes)), np.inf)
     for i, a in enumerate(nodes):
         for j, b in enumerate(nodes): 
             node_distances[i, j] = distance_function(a, b)
-    
+
+    print("distances: ")
+    print(node_distances)
     # Get the cumulative distances of all the nodes to one another
     node_distance_bins = [0] * len(nodes)
     for i in range(len(nodes)):
@@ -223,18 +227,28 @@ def consensus_best_node_distance(nodes, distance_function=node_distance):
             node_distance_bins[i] += node_distances[i, j]
             node_distance_bins[j] += node_distances[i, j]
 
+    print("bins: ", node_distance_bins)
     # Idea for threshold check: see how many nodes are within 1 std of best node regarding cumulative distance
     # Then get the ratio between this and the total amount of candidates
     # This number will get close to 1 if many of the nodes agree with the best node
     std = np.std(node_distance_bins)
     mcd = min(node_distance_bins)
-    candidates_that_agree = [x for x in node_distance_bins if x > mcd - std and x < mcd + std]
-    ratio = len(candidates_that_agree) / len(nodes)
+    mcd_index = node_distance_bins.index(mcd)
+    candidates_that_agree = np.zeros(len(node_distance_bins)) > 0
+    candidates_that_agree[mcd_index] = True
+    for index, val in enumerate(candidates_that_agree):
+        if val==False:
+            # Is the node within std range?
+            candidates_that_agree[index] = node_distances[mcd_index, index] - std <= 0
+
+    print("std and mcd: ", std, mcd)
+    print(candidates_that_agree)
+    ratio = sum(candidates_that_agree) / len(nodes)
     consensus = False
     if ratio > cfg.aggregator_xml_threshold:
         consensus = True
-
-    return nodes[np.argmin(node_distance_bins)], consensus
+    print("consensus: ", nodes[mcd_index].tagName, consensus)
+    return nodes[mcd_index], consensus
 
 def consensus_bnd_enrich_skeleton(nodes, distance_function=node_distance):
     first = nodes[0]
@@ -248,18 +262,17 @@ def consensus_bnd_enrich_skeleton(nodes, distance_function=node_distance):
 
 def build_consensus_tree(trees, consensus_method = consensus_best_node_distance, exclude = [GAP_ELEMENT_NAME]):
     consensus_per_node = {}
-    return _build_consensus_tree(trees, create_gap_element(), 0, consensus_method, exclude, dict()).childNodes[0], consensus_per_node
+    return _build_consensus_tree(trees, create_gap_element(), 0, consensus_method, exclude, consensus_per_node).childNodes[0], consensus_per_node
 
 
 def _build_consensus_tree(trees, new_tree, n, consensus_method, exclude, node_consensus_dict):
     group = zip(*[c.childNodes for c in trees])
-    if group:
-        for nodes in group:
-            best, consensus = consensus_method(nodes)
-            node_consensus_dict[best] = consensus
-            if best.tagName in exclude:
-                continue
-                
-            new_tree.childNodes.append(best.cloneNode(False))
-            _build_consensus_tree(nodes, new_tree.childNodes[-1], n + 1, consensus_method, exclude, node_consensus_dict)
+    for nodes in group:
+        best, consensus = consensus_method(nodes)
+        node_consensus_dict[best] = consensus
+        if best.tagName in exclude:
+            continue
+
+        new_tree.childNodes.append(best.cloneNode(False))
+        _build_consensus_tree(nodes, new_tree.childNodes[-1], n + 1, consensus_method, exclude, node_consensus_dict)
     return new_tree
