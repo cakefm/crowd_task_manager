@@ -146,7 +146,7 @@ def update_control_action_status(identifier, action_status):
     mydb = myclient[MONGO_DB]
     mycol = mydb[cfg.col_submitted_task]
 
-    entry = mycol.find_one({"task_id": identifier})
+    entry = mycol.find_one({"task_id": identifier, "digitaldocument_id": {"$exists": True} })
     ce_identifier = entry['ce_identifier']
 
     payload = "{\"query\":\"mutation{\\n  UpdateControlAction(\\n    identifier: \\\"%s\\\",\\n    actionStatus: %s\\n  )\\n  {\\n    identifier,\\n    actionStatus,\\n    url\\n  }\\n}\"}"
@@ -168,12 +168,12 @@ def create_task_group(score_name, name, title):
     potentialaction_id = "415fb8b5-c6ea-4c1d-be94-dd5fa8db4fd9"
 
     # get entrypointid and potentialactionid from settings.yaml
-    payload = "{\"query\":\"mutation {\\n  verifyTaskGroup: RequestControlAction(\\n    controlAction: {\\n      entryPointIdentifier: \\\"%s\\\"\\n      potentialActionIdentifier: \\\"%s\\\"\\n      potentialAction: {\\n        name: \\\"%s\\\"\\n        title: \\\"%s\\\" }\\n    } )\\n  {\\n    identifier\\n  }\\n}\"}"
+    payload = "{\"query\":\"mutation {\\n  taskGroup: RequestControlAction(\\n    controlAction: {\\n      entryPointIdentifier: \\\"%s\\\"\\n      potentialActionIdentifier: \\\"%s\\\"\\n      potentialAction: {\\n        name: \\\"%s\\\"\\n        title: \\\"%s\\\" }\\n    } )\\n  {\\n    identifier\\n  }\\n}\"}"
     headers = {'Content-Type': 'application/json'}
     payload = payload % (entrypoint_id, potentialaction_id, name, title)
     response = requests.request("POST", url, data=payload, headers=headers)
     data = json.loads(response.text)
-    ce_id = data['data']['RequestControlAction']['identifier']
+    ce_id = data['data']['taskGroup']['identifier']
 
     # store the task group id, tasktype
     mycol = mydb["ce_taskgroups"]
@@ -237,12 +237,12 @@ def create_task(task_id, task_type):
 
     payload = "{\"query\":\"mutation {\\n  AddControlActionObject(\\n    from: { \\n      identifier: \\\"%s\\\" \\n    }\\n    to: { \\n      identifier: \\\"%s\\\" \\n    } ){\\n    from {\\n      identifier\\n    }\\n    to \\n    {\\n      identifier\\n    }\\n  }\\n}\"}"
     headers = {'Content-Type': 'application/json'}
-    payload = payload % (task_id, digitaldocument_id)
+    payload = payload % (ce_task_id, digitaldocument_id)
     response = requests.request("POST", url, data=payload, headers=headers)
 
     payload = "{\"query\":\"mutation {\\n  AddControlActionWasGeneratedBy(\\n    from: { \\n      identifier: \\\"%s\\\" \\n    }\\n    to: { \\n      identifier: \\\"%s\\\" \\n    } \\n  ){\\n    from {\\n      identifier\\n    }\\n    to {\\n      identifier\\n    }\\n  } \\n}\"}"
     headers = {'Content-Type': 'application/json'}
-    payload = payload % (task_id, task_group_controlaction_id)
+    payload = payload % (ce_task_id, task_group_controlaction_id)
     response = requests.request("POST", url, data=payload, headers=headers)
 
 def update_task_group(score_name, task_type, mei_url, action_status):
