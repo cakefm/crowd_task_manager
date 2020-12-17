@@ -228,20 +228,20 @@ def consensus_best_node_distance(nodes, distance_function=node_distance):
             node_distance_bins[j] += node_distances[i, j]
 
     print("bins: ", node_distance_bins)
-    # Idea for threshold check: see how many nodes are within 1 std of best node regarding cumulative distance
+    # Idea for threshold check: see how many nodes are within 1 mad of best node regarding cumulative distance
     # Then get the ratio between this and the total amount of candidates
     # This number will get close to 1 if many of the nodes agree with the best node
-    std = np.std(node_distance_bins)
     mcd = min(node_distance_bins)
     mcd_index = node_distance_bins.index(mcd)
+    mad = np.median(np.absolute(np.array(node_distance_bins) - np.median(node_distance_bins)))
     candidates_that_agree = np.zeros(len(node_distance_bins)) > 0
     candidates_that_agree[mcd_index] = True
     for index, val in enumerate(candidates_that_agree):
         if val==False:
             # Is the node within std range?
-            candidates_that_agree[index] = node_distances[mcd_index, index] - std <= 0
+            candidates_that_agree[index] = node_distances[mcd_index, index] - mad <= 0
 
-    print("std and mcd: ", std, mcd)
+    print("mad and mcd: ", mad, mcd)
     print(candidates_that_agree)
     ratio = sum(candidates_that_agree) / len(nodes)
     consensus = False
