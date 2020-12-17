@@ -27,6 +27,8 @@ services:
     depends_on:
       - mongo
       - rabbitmq
+    volumes:
+      - ./scriptoria/src/assets/omr_files:/omr_files
     command:  sh -c "./wait && ./docker_test_start.sh"
     tty: true
     privileged: true
