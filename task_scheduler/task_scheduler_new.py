@@ -133,7 +133,7 @@ def take_action_on_status(channel, method, properties, body):
                                                     ],
         ("form_processor", "verification-failed"):  [
                                                         invalidate_task_results,
-                                                        decrement_step,
+                                                        reset_step,  # Reset the entire task for now
                                                         update_task_xml,
                                                         resubmit
                                                     ],
@@ -400,9 +400,20 @@ def decrement_step(message, channel):
     except StopIteration:
         previous_step = task_type.steps[0]
 
-    update_task_url(task_id)
     print(f"Decrementing step from {current_step} to {previous_step} for task {task_id}")
     db[cfg.col_task].update_one({"_id": ObjectId(task_id)}, {"$set": {"step": previous_step}})
+    update_task_url(task_id)
+
+
+def reset_step(message, channel):
+    task_id = message["_id"]
+    task = get_task(task_id)
+    task_type = task_types[task["type"]]
+    current_step = task["step"]
+
+    print(f"Resetting from step {current_step} to step {task_type.steps[0]} for task {task_id}")
+    db[cfg.col_task].update_one({"_id": ObjectId(task_id)}, {"$set": {"step": task_type.steps[0]}})
+    update_task_url(task_id)
 
 
 def increment_step(message, channel):
@@ -420,9 +431,9 @@ def increment_step(message, channel):
     except StopIteration:
         next_step = DONE_STEP
 
-    update_task_url(task_id)
     print(f"Advancing step from {current_step} to {next_step} for task {task_id}")
     db[cfg.col_task].update_one({"_id": ObjectId(task_id)}, {"$set": {"step": next_step}})
+    update_task_url(task_id)
 
 
 def resubmit(message, channel):
