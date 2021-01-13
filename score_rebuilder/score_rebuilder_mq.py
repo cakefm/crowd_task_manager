@@ -13,6 +13,7 @@ from bson.objectid import ObjectId
 
 from pymongo import MongoClient
 
+
 def callback(ch, method, properties, body):
     data = json.loads(body)
     sheet_name = data['name']
@@ -27,12 +28,12 @@ def callback(ch, method, properties, body):
     # mei_measures = mei_xml.getElementsByTagName("measure")
 
     # Obtain corresponding task and slice
-    task = db[cfg.col_task].find_one({"_id" : ObjectId(task_id)})
+    task = db[cfg.col_task].find_one({"_id": ObjectId(task_id)})
     # measure_staff_slice = db[cfg.col_slice].find_one({"_id" : ObjectId(task["slice_id"])})
     # slice_measures = mei_measures[measure_staff_slice["start"]: measure_staff_slice["end"]]
 
     # Get aggregated XML
-    aggregated_result = db[cfg.col_aggregated_result].find_one({"task_id" : task_id, "step": task["step"]})
+    aggregated_result = db[cfg.col_aggregated_result].find_one({"task_id": task_id, "step": task["step"]})
     aggregated_xml = aggregated_result["result"]
 
     # Temporary solution: give the slice somewhat more context by inserting only the header of the previous measure into it
@@ -48,7 +49,7 @@ def callback(ch, method, properties, body):
     mei_section = mei_xml_tree.getElementsByTagName("section")[0]
     mei_section_xml = mei_section.toxml()
     aligned_trees = ta.align_trees_multiple([mei_section_xml, aggregated_xml], distance_function=ta.node_distance_anchored)
-    final_section_tree, _ = ta.build_consensus_tree(aligned_trees, consensus_method=ta.consensus_bnd_enrich_skeleton)
+    final_section_tree, _ = ta.build_consensus_tree(aligned_trees, consensus_method=ta.consensus_bnd_override_inner)
     tt.replace_child_nodes(mei_section, final_section_tree.childNodes)
 
     # Write MEI file
@@ -56,9 +57,9 @@ def callback(ch, method, properties, body):
         mei_file.write(tt.purge_non_element_nodes(mei_xml_tree.documentElement).toprettyxml())
 
     status_update_msg = {
-    '_id': task_id,
-    'module': 'score_rebuilder',
-    'status': 'complete'
+        '_id': task_id,
+        'module': 'score_rebuilder',
+        'status': 'complete'
     }
 
     global channel

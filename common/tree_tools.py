@@ -102,6 +102,17 @@ def traverse_tree(tree, depth_first=True, filter_function=node_type_filter(xml.N
         yield indexed_node
 
 
+def has_ancestors_by_name(node, ancestor_names):
+    ancestor = node.parentNode
+    while ancestor != None:
+        try:
+            if ancestor.tagName in ancestor_names:
+                return True
+            ancestor = ancestor.parentNode
+        except:
+            return False
+    return False
+
 def insert_node(tree, path, node, append=False):
     '''
     Inserts a given node into the given (sub) tree at the given path. The path indicates
