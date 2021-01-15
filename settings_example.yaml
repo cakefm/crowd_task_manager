@@ -63,6 +63,7 @@ github_organization: ""
 github_branch: ""
 
 # Aggregator
+aggregator_consensus_tolerance|float: 0.0
 aggregator_xml_threshold|float|0...1: 0.6
 aggregator_form_threshold|float|0...1: 0.6
 

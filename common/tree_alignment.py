@@ -239,13 +239,13 @@ def consensus_best_node_distance(nodes, distance_function=node_distance):
     for index, val in enumerate(candidates_that_agree):
         if val==False:
             # Is the node within std range?
-            candidates_that_agree[index] = node_distances[mcd_index, index] - mad <= 0
+            candidates_that_agree[index] = node_distances[mcd_index, index] <= cfg.aggregator_consensus_tolerance * mad
 
     # print("mad and mcd: ", mad, mcd)
     # print(candidates_that_agree)
     ratio = sum(candidates_that_agree) / len(nodes)
     consensus = False
-    if ratio > cfg.aggregator_xml_threshold:
+    if ratio >= cfg.aggregator_xml_threshold:
         consensus = True
     # print("consensus: ", nodes[mcd_index].tagName, consensus)
     return nodes[mcd_index], consensus, False
