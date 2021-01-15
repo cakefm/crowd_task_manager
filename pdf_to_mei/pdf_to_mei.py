@@ -55,14 +55,22 @@ def callback(ch, method, properties, body):
 
     # PDF -> JPEG
     print("Converting PDF to JPEG page images...")
-    pages = convert_from_path(pdf_sheet_path.absolute(), 300)
+    i = 1
+    pages = []
     img_pages_path = fsm.get_sheet_pages_directory(pdf_sheet_name)
-    for index, page in enumerate(pages):
-        page_path = img_pages_path / f'page_{index}.jpg'
-        page.save(page_path, 'JPEG')
-        sheet_collection.update_one({'sheet_path': str(pdf_sheet_path)},
-                                    {'$push': {'pages_path': str(page_path)}})
-        print(f"{index} pages out of {len(pages)}")
+    while True:
+        try:
+            page = convert_from_path(pdf_sheet_path.absolute(), 300, first_page=i, last_page=i+1)[0]
+            page_path = img_pages_path / f'page_{i}.jpg'
+            page.save(page_path, 'JPEG')
+            sheet_collection.update_one({'sheet_path': str(pdf_sheet_path)},
+                                        {'$push': {'pages_path': str(page_path)}})
+            del page
+            print(f"{i} pages out of {len(pages)}")
+        except:
+            print("REACHED")
+            break
+        i += 1
     print("DONE")
 
     # JPEG -> MEI
