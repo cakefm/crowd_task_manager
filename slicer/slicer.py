@@ -53,6 +53,7 @@ class Slice(namedtuple("ImmutableSlice", ["score", "start", "end", "staff_start"
         """
 
         measures = self.get_measures()
+        
         im = self.score.get_page_image(measures[0].staffs[0].page_index)
 
         # If all slices are on same line/page, a simple crop will suffice
@@ -286,7 +287,7 @@ class Score:
     def get_page_image(self, page_index):
         """
         Lazily loads the images associated with pages.
-        """
+        """        
         image_name = self.pages[page_index].image_name
         if image_name not in self.images:
             self.images[image_name] = Image.open(str(self.pages_path / image_name))

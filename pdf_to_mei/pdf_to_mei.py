@@ -84,6 +84,7 @@ def callback(ch, method, properties, body):
 
     # Update sheet on mongo
     mei_path = fsm.get_sheet_whole_directory(pdf_sheet_name) / "aligned.mei"
+    print(str(mei_path))
     sheet_collection.update_one({'_id': ObjectId(pdf_id)},
                                 {'$push': {'mei_path': str(mei_path)}})
 
