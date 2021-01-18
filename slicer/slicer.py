@@ -157,7 +157,7 @@ class Score:
         score_def_before_measure = None
         self.context = self.build_initial_context()
         for entry_index, entry in enumerate(entries):
-            if entry.tagName == "pb" and page:
+            if entry.tagName == "pb":
                 if not skipped_first_page_tag:
                     skipped_first_page_tag = True
                 else:
