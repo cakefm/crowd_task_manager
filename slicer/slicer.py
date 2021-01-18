@@ -16,19 +16,20 @@ class NotOnSamePageException(Exception):
     pass
 
 # TODO: we need "staff_start" and "staff_end" support
-class Slice(namedtuple("ImmutableSlice", ["score", "start", "end", "staff_start", "staff_end", "type", "tuple_size", "same_line", "same_page"])):
+class Slice(namedtuple("ImmutableSlice", ["score", "start", "end", "staff_start", "staff_end", "type", "tuple_size", "page", "same_line", "same_page"])):
     """
     Class for specifying slices and performing operations on them. It is initialized with a reference to
     a score instance, a starting measure index, an ending measure index (exclusive, as in Python), and a
     slice index. Note that a slice is immutable, this will allow for precomputing certain properties of 
     the measures within without worrying about changes to indices etc.
     """
-    def __new__(clazz, score, start, end, staff_start, staff_end, slice_type, tuple_size):
+    def __new__(clazz, score, start, end, staff_start, staff_end, slice_type, tuple_size, page):
         """Doing this allows making additional computed fields immutable as well."""
         if not staff_end:
             staff_end = len(score.measures[0].staffs)
         staff_measures = [measure.staffs[staff_start] for measure in score.measures[start:end]]
-        self = super(Slice, clazz).__new__(clazz,
+        self = super(Slice, clazz).__new__(
+            clazz,
             score,
             start,
             end,
@@ -36,8 +37,10 @@ class Slice(namedtuple("ImmutableSlice", ["score", "start", "end", "staff_start"
             staff_end,
             slice_type,
             tuple_size,
+            page,
             all([staff_measures[0].line_index == x.line_index for x in staff_measures]),
-            all([staff_measures[0].page_index == x.page_index for x in staff_measures]))
+            all([staff_measures[0].page_index == x.page_index for x in staff_measures])
+        )
         return self
 
     def get_image(self):
@@ -100,7 +103,8 @@ class Slice(namedtuple("ImmutableSlice", ["score", "start", "end", "staff_start"
             "staff_start": self.staff_start,
             "staff_end": self.staff_end,
             "type": self.type,
-            "tuple_size": self.tuple_size
+            "tuple_size": self.tuple_size,
+            "page": self.page
         }
 
 
@@ -315,7 +319,7 @@ class Score:
         for pages in iterator:
             s = pages[0].lines[0].measures[0].index
             e = pages[-1].lines[-1].measures[-1].index
-            slices.append(Slice(self, s, e + 1, staff_start, staff_end, "pages", n))
+            slices.append(Slice(self, s, e + 1, staff_start, staff_end, "pages", n, -1))
         return slices
 
     def get_line_slices(self, n=1, start=0, end=None, staff_start=0, staff_end=None):
@@ -329,7 +333,8 @@ class Score:
         for lines in iterator:
             s = lines[0].measures[0].index
             e = lines[-1].measures[-1].index
-            slices.append(Slice(self, s, e + 1, staff_start, staff_end, "lines", n))
+            p = lines[0].measures[0].staffs[0].page_index
+            slices.append(Slice(self, s, e + 1, staff_start, staff_end, "lines", n, p))
         return slices
 
     def get_measure_slices(self, n=1, start=0, end=None, staff_start=0, staff_end=None):
@@ -343,7 +348,8 @@ class Score:
         for measures in iterator:
             s = measures[0].index
             e = measures[-1].index
-            slices.append(Slice(self, s, e + 1, staff_start, staff_end, "measures", n))
+            p = measures[0].staffs[0].page_index
+            slices.append(Slice(self, s, e + 1, staff_start, staff_end, "measures", n, p))
         return slices
 
     def to_db_dict(self):

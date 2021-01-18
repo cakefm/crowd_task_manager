@@ -38,20 +38,24 @@ def callback(ch, method, properties, body):
     # determine staff count from first measure
     staffs = range(len(score.measures[0].staffs))
 
-
+    print("Getting slices to create...")
     slice_paths_lists = {
         measure_path            : [score.get_measure_slices(staff_start=index, staff_end=index+1) for index in staffs],
-        line_path               : [score.get_line_slices()]
+        # line_path               : [score.get_line_slices()]
     }
 
+    slices = []
     for slice_path, slice_list_list in slice_paths_lists.items():
         for slice_list in slice_list_list:
             pathlib.Path(slice_path).mkdir(parents=True, exist_ok=True)
+            print(f"Creating slice images for {len(slice_list)} slices")
+            connection.process_data_events()
             for score_slice in slice_list:
                 if score_slice.same_page:
                     score_slice.get_image().save(str(slice_path / score_slice.get_name()))
-                    slice_res = db[cfg.col_slice].insert_one(score_slice.to_db_dict())
-                    print(f"added entry {slice_res.inserted_id} to slices collection")
+                    slices.append(score_slice.to_db_dict())
+    slice_res = db[cfg.col_slice].insert_many(slices)
+    print(f"Added slice entries to db:", slice_res.inserted_ids)
 
     channel.queue_declare(queue=cfg.mq_omr_planner_status)
 

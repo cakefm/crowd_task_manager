@@ -9,7 +9,7 @@ from lxml import etree
 from tqdm import tqdm
 import numpy as np
 
-def run(sheet_name):
+def run(sheet_name, connection):
 
     version = '1.0.0'
 
@@ -50,6 +50,7 @@ def run(sheet_name):
     for image_path in tqdm(image_paths, unit='img'):
         page = detector.detect_measures(image_path)
         results.append({'path': image_path, 'page': page})
+        connection.process_data_events()
 
     # Generate MEI file
     xml_parser = etree.XMLParser(remove_blank_text=True)
@@ -80,6 +81,7 @@ def run(sheet_name):
     section_lengths = []
     measures_per_page = []
     for p, result in enumerate(results):
+        print("Processing page", page)
         page, path = result['page'], result['path']
 
         mei_surface = etree.Element('surface')

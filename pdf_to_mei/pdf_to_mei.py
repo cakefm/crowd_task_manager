@@ -75,7 +75,7 @@ def callback(ch, method, properties, body):
 
     # JPEG -> MEI
     print("Converting JPEG pages to MEI skeleton...")
-    to_mei.run(pdf_sheet_name)
+    to_mei.run(pdf_sheet_name, connection)
 
     # Update sheet on mongo
     mei_path = fsm.get_sheet_whole_directory(pdf_sheet_name) / "aligned.mei"

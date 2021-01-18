@@ -2,6 +2,8 @@ import pika
 import yaml
 import json
 import sys
+import os
+import shutil
 sys.path.append("..")
 from common.settings import cfg
 import common.file_system_manager as fsm
@@ -540,15 +542,26 @@ def send_first_batches(stage, score_name, channel):
         submit_batch(next_batch, channel)
 
 
+def copydir(from_path, to_path):
+    if os.path.exists(to_path):
+        shutil.rmtree(to_path)
+    shutil.copytree(from_path, to_path)
+
+
 def create_tasks_and_batches_for_stage(stage, score_name):
+    slices_path = fsm.get_sheet_slices_directory(score_name)
     for task_type in stage.task_types:
         print(" ", f"Creating tasks for {task_type}")
         # Retrieve slices for given score and task type and create the tasks
         relevant_slices = db[cfg.col_slice].find(task_type.get_slice_query(score_name))
+
+
+        step_size = 200
+        tasks = []
+        all_tasks = []
         task_ids = []
-        for measure_slice in relevant_slices:
-            slice_location = str(fsm.get_sheet_slices_directory(measure_slice['score']) / task_type.slice_type / measure_slice['name'])
-            copy_destination = str(fsm.get_sheet_api_directory(measure_slice['score'], slice_type=task_type.slice_type) / measure_slice['name'])
+        for i, measure_slice in enumerate(relevant_slices):
+            slice_location = str(slices_path / task_type.slice_type / measure_slice['name'])
             first_step = next(iter(task_type.steps.keys()))
             step_submission = {s: False for s in task_type.steps.keys()}
             xml, context = get_slice_context_and_xml(measure_slice)
@@ -557,6 +570,7 @@ def create_tasks_and_batches_for_stage(stage, score_name):
                 'type': task_type.name,
                 'score': measure_slice['score'],
                 'slice_id': str(measure_slice['_id']),
+                'page': str(measure_slice['page']),
                 'image_path': slice_location,
                 'step_submission': step_submission,
                 'step': first_step,
@@ -568,47 +582,44 @@ def create_tasks_and_batches_for_stage(stage, score_name):
                 'batch_id': None,  # Gets assigned later,
                 'stage': stage.order
             }
+            tasks.append(task)
+            all_tasks.append(task)
 
-            key = {
-                'slice_id': str(measure_slice['_id']),
-                'type': task_type.name,
-                'score': measure_slice['score']
-            }
+            if (len(tasks) >= step_size):
+                print(f"Creating tasks {i} to {i + step_size}")
+                entries = db[cfg.col_task].insert_many(tasks)
+                print("Created tasks: ", entries.inserted_ids)
+                task_ids += entries.inserted_ids
+                connection.process_data_events()
+                tasks = []
+        print(f"Creating final tasks")
+        entries = db[cfg.col_task].insert_many(tasks)
+        task_ids += entries.inserted_ids
+        connection.process_data_events()
+        tasks = []
+        # print("Created tasks: ", entries.inserted_ids)
+        create_batches_from_tasks(task_ids, all_tasks, task_type, score_name)
 
-            # TODO: upsertion may be undesirable: if the task manager crashes, task progress will be "wiped"
-            # instead, maybe it is better to not update at all if the task already exists.
-            entry = db[cfg.col_task].replace_one(key, task, True)
-
-            task_id = entry.upserted_id
-            if not task_id:
-                task_id = db[cfg.col_task].find_one(key)["_id"]
-
-            update_task_url(str(task_id))
-            task_ids.append(task_id)
-
-            copyfile(slice_location, copy_destination)
-
-            if entry.upserted_id:
-                print(" ", " ", f"Created task {task} with id {entry.upserted_id}")
-            else:
-                # TODO: Might need to raise exception as this is undesired behaviour
-                print(" ", " ", f"Did nothing, task {task} already exists under id {task_id}")
-
-        create_batches_from_tasks(task_ids, task_type, score_name)
+    # Potentially this is not needed anymore, as the front end already has slice access via docker volume
+    # api_slices_path = fsm.get_sheet_api_directory(score_name)
+    # copydir(slices_path, api_slices_path)
 
 
-def create_batches_from_tasks(task_ids, task_type, score_name):
+def create_batches_from_tasks(task_ids, all_tasks, task_type, score_name):
+    print("Allocating tasks to batches...")
     # First allocate the tasks over the batches
     task_batches = {}
-    for task_id in task_ids:
-        batch_key = task_type.get_task_priority(task_id, db)
+    for task_id, task in zip(task_ids, all_tasks):
+        batch_key = task_type.get_task_priority(task)
         if batch_key not in task_batches:
             task_batches[batch_key] = []
         task_batches[batch_key].append(str(task_id))
 
     # Then create the corresponding batches in the database
     # Also add a ref to the batch in the tasks
+    print("Adding batches to DB")
     for batch_priority in task_batches:
+        connection.process_data_events()
         batch_dict = {
             "priority": batch_priority,
             "task_type": task_type.name,
@@ -626,9 +637,15 @@ def create_batches_from_tasks(task_ids, task_type, score_name):
         # NOTE: This would wipe the "submitted" state of existing batches in the db
         entry = db[cfg.col_task_batch].replace_one(key, batch_dict, True)
         batch_id = entry.upserted_id if entry.upserted_id else db[cfg.col_task_batch].find_one(key)["_id"]
-
-        for task_id in task_batches[batch_priority]:
-            db[cfg.col_task].update_one({"_id": ObjectId(task_id)}, {"$set": {"batch_id": batch_id}})
+        db[cfg.col_task].update_many({"_id": {"$in": task_ids}}, [
+            {"$set": {
+                "batch_id": batch_id,
+                "url": {"$concat": [f"{cfg.current_server}/{task_type.name}/", "$step", "/", {"$toString": "$_id"}]}
+            }}
+        ])
+        # for task_id in task_batches[batch_priority]:
+        #     db[cfg.col_task].update_one({"_id": ObjectId(task_id)}, {"$set": {"batch_id": batch_id}})
+        #     update_task_url(str(task_id))
 
 
 def determine_current_stage(score_name):

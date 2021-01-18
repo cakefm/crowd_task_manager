@@ -1,4 +1,4 @@
-def run(sheet_name):
+def run(sheet_name, connection):
     import datetime
     import sys
     sys.path.append("..")
