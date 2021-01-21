@@ -74,8 +74,11 @@ def callback(ch, method, properties, body):
     print("DONE")
 
     # JPEG -> MEI
-    print("Converting JPEG pages to MEI skeleton...")
-    to_mei.run(pdf_sheet_name, connection)
+    if (fsm.skeleton_exists(pdf_sheet_name)):
+        print("Using pre-existing skeleton, skipping measure detection...")
+    else:
+        print("Converting JPEG pages to MEI skeleton via measure detector...")
+        to_mei.run(pdf_sheet_name, connection)
 
     # Update sheet on mongo
     mei_path = fsm.get_sheet_whole_directory(pdf_sheet_name) / "aligned.mei"

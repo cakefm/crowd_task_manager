@@ -7,6 +7,9 @@ from pathlib import Path
 sys.path.append("..")
 from common.settings import cfg
 
+def skeleton_exists(sheet_name:str):
+    return (get_sheet_whole_directory(sheet_name) / "aligned.mei").exists()
+
 def get_sheet_slices_directory(sheet_name:str):
     '''
     Get the path to the slices folder of the current sheet 
