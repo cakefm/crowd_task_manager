@@ -68,10 +68,10 @@ def callback(ch, method, properties, body):
             del page
             print(f"{i} pages out of {len(pages)}")
         except:
-            print("REACHED")
+            print("Reached end of PDF")
             break
         i += 1
-    print("DONE")
+    print("PDF conversion finished succesfully!")
 
     # JPEG -> MEI
     if (fsm.skeleton_exists(pdf_sheet_name)):
