@@ -555,7 +555,6 @@ def create_tasks_and_batches_for_stage(stage, score_name):
         # Retrieve slices for given score and task type and create the tasks
         relevant_slices = db[cfg.col_slice].find(task_type.get_slice_query(score_name))
 
-
         step_size = 200
         tasks = []
         all_tasks = []
@@ -696,7 +695,7 @@ if __name__ == "__main__":
     parameters = pika.ConnectionParameters(*cfg.rabbitmq_address)
     connection = pika.BlockingConnection(parameters)
     channel = connection.channel()
-    task_types[2] = 3
+
     channel.queue_declare(queue=cfg.mq_task_scheduler)
     channel.queue_declare(queue=cfg.mq_task_scheduler_status)
     channel.basic_consume(
