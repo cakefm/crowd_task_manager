@@ -52,7 +52,7 @@ def get_slice_context_and_xml(measure_slice):
 
 def update_task_url(task_id):
     task = get_task(task_id)
-    url = f"{cfg.current_server}/{task['type']}/{task['step']}/{task_id}"
+    url = f"{cfg.current_server}{task['type']}/{task['step']}/{task_id}"
     db[cfg.col_task].update_one({"_id": ObjectId(task_id)}, {"$set": {"url": url}})
 
 
@@ -640,7 +640,7 @@ def create_batches_from_tasks(task_ids, all_tasks, task_type, score_name):
         db[cfg.col_task].update_many({"_id": {"$in": task_ids}}, [
             {"$set": {
                 "batch_id": batch_id,
-                "url": {"$concat": [f"{cfg.current_server}/{task_type.name}/", "$step", "/", {"$toString": "$_id"}]}
+                "url": {"$concat": [f"{cfg.current_server}{task_type.name}/", "$step", "/", {"$toString": "$_id"}]}
             }}
         ])
         # for task_id in task_batches[batch_priority]:
