@@ -636,7 +636,7 @@ def create_batches_from_tasks(task_ids, all_tasks, task_type, score_name):
         # NOTE: This would wipe the "submitted" state of existing batches in the db
         entry = db[cfg.col_task_batch].replace_one(key, batch_dict, True)
         batch_id = entry.upserted_id if entry.upserted_id else db[cfg.col_task_batch].find_one(key)["_id"]
-        db[cfg.col_task].update_many({"_id": {"$in": task_ids}}, [
+        db[cfg.col_task].update_many({"_id": {"$in": [ObjectId(t) for t in task_batches[batch_priority]]}}, [
             {"$set": {
                 "batch_id": batch_id,
                 "url": {"$concat": [f"{cfg.current_server}{task_type.name}/", "$step", "/", {"$toString": "$_id"}]}
