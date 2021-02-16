@@ -100,8 +100,17 @@ def take_action_on_status(channel, method, properties, body):
     #       maybe use a different field in the task
     task_id = message["_id"]
     task = get_task(task_id)
-    if task["step"] == DONE_STEP and module != "task_scheduler":
-        print(f"WARNING: Got message after {task_id} was done already from a module other than task_schedueler {module}")
+
+    # Can happen at the end of a stage, when tasks get wiped --> reconsider wiping of tasks
+    if not task:
+        print("Task did not exist:", task_id)
+        return
+
+    whitelist = ["task_scheduler", "github_update"]
+    if task["step"] == DONE_STEP and module not in whitelist:
+        print(f"WARNING: Got message after {task_id} was done already from {module}, cancelling")
+        # Might be redundant to return here..
+        return
 
     # TODO: rewrite back to if/else again, this is hell for debugging
     # TODO: split "checks" from "actions", makes code more readable and predictable and allows for more control flow
@@ -121,6 +130,9 @@ def take_action_on_status(channel, method, properties, body):
                                                         github_commit,
                                                         increment_step,
                                                         resubmit
+                                                    ],
+        # Score rebuilding fails only happen at the "done" step for now, so we can ignore them
+        ("score_rebuilder", "failed"):              [
                                                     ],
         ("aggregator_form", "complete"):            [
                                                         process_form_output
@@ -150,6 +162,7 @@ def take_action_on_status(channel, method, properties, body):
     }[(module, status)]
 
     for action in actions:
+        # This print was spammy
         # print(f"Executing {action} triggered by {message}")
         action(message, channel)
 
