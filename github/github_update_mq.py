@@ -76,7 +76,7 @@ def callback(ch, method, properties, body):
 
     # Update status
     status_update_msg = {
-        '_id': sheet_id,
+        '_id': task_id,
         'module': 'github_update',
         'status': 'complete',
         'name': sheet_name
