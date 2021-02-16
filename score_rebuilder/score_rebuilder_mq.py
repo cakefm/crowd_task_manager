@@ -34,33 +34,42 @@ def callback(ch, method, properties, body):
 
     # Get aggregated XML
     aggregated_result = db[cfg.col_aggregated_result].find_one({"task_id": task_id, "step": task["step"]})
-    aggregated_xml = aggregated_result["result"]
 
-    # Temporary solution: give the slice somewhat more context by inserting only the header of the previous measure into it
-    tree = xml.parseString(aggregated_xml).documentElement
-    index = int(tree.getElementsByTagName("measure")[0].getAttribute("n")) - 1  # n-index is shifted up by 1
-    if index > 0:
-        measure = mei_xml_tree.getElementsByTagName("measure")[index - 1].cloneNode(deep=True)  # get the previous measure
-        measure.childNodes = []
-        tree.insertBefore(measure, tree.childNodes[0])
-        aggregated_xml = tree.toxml()
+    if aggregated_result:
+        aggregated_xml = aggregated_result["result"]
 
-    # Perform combination with original MEI via tree aligner
-    mei_section = mei_xml_tree.getElementsByTagName("section")[0]
-    mei_section_xml = mei_section.toxml()
-    aligned_trees = ta.align_trees_multiple([mei_section_xml, aggregated_xml], distance_function=ta.node_distance_anchored)
-    final_section_tree, _ = ta.build_consensus_tree(aligned_trees, consensus_method=ta.consensus_bnd_override_inner)
-    tt.replace_child_nodes(mei_section, final_section_tree.childNodes)
+        # Temporary solution: give the slice somewhat more context by inserting only the header of the previous measure into it
+        tree = xml.parseString(aggregated_xml).documentElement
+        index = int(tree.getElementsByTagName("measure")[0].getAttribute("n")) - 1  # n-index is shifted up by 1
+        if index > 0:
+            measure = mei_xml_tree.getElementsByTagName("measure")[index - 1].cloneNode(deep=True)  # get the previous measure
+            measure.childNodes = []
+            tree.insertBefore(measure, tree.childNodes[0])
+            aggregated_xml = tree.toxml()
 
-    # Write MEI file
-    with open(str(mei_path), 'w') as mei_file:
-        mei_file.write(tt.purge_non_element_nodes(mei_xml_tree.documentElement).toprettyxml())
+        # Perform combination with original MEI via tree aligner
+        mei_section = mei_xml_tree.getElementsByTagName("section")[0]
+        mei_section_xml = mei_section.toxml()
+        aligned_trees = ta.align_trees_multiple([mei_section_xml, aggregated_xml], distance_function=ta.node_distance_anchored)
+        final_section_tree, _ = ta.build_consensus_tree(aligned_trees, consensus_method=ta.consensus_bnd_override_inner)
+        tt.replace_child_nodes(mei_section, final_section_tree.childNodes)
 
-    status_update_msg = {
-        '_id': task_id,
-        'module': 'score_rebuilder',
-        'status': 'complete'
-    }
+        # Write MEI file
+        with open(str(mei_path), 'w') as mei_file:
+            mei_file.write(tt.purge_non_element_nodes(mei_xml_tree.documentElement).toprettyxml())
+
+        status_update_msg = {
+            '_id': task_id,
+            'module': 'score_rebuilder',
+            'status': 'complete'
+        }
+    else:
+        print(f"Aggregated result for task with id {task_id} at step {task['step']} did not exist!")
+        status_update_msg = {
+            '_id': task_id,
+            'module': 'score_rebuilder',
+            'status': 'failed'
+        }
 
     global channel
     channel.queue_declare(queue=cfg.mq_task_scheduler_status)
