@@ -1,0 +1,36 @@
+version: "3.8"
+services:
+  mongo:
+    image: "mongo"
+    expose:
+      - 27017
+  mongo-express:
+    image: mongo-express
+    restart: always
+    ports:
+      - "8081:8081"
+    logging:
+      driver: none
+  rabbitmq:
+    image: "rabbitmq:management"
+    expose:
+      - 5672
+      - 5673
+    ports:
+      - "15672:15672"
+    logging:
+      driver: none
+  trompa:
+    build: .
+    ports:
+      - "443:443"
+    depends_on:
+      - mongo
+      - rabbitmq
+    volumes:
+      - ./scriptoria/src/assets/omr_files:/omr_files
+    command:  sh -c "./wait && ./docker_test_start.sh"
+    tty: true
+    privileged: true
+    environment:
+      WAIT_HOSTS: mongo:27017, rabbitmq:5672

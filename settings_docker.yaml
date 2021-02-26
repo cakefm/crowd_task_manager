@@ -1,19 +1,7 @@
-# This config has some optional fancy parsing options, that can be added after a '|' separator in the config entry name.
-#
-# The first option explicitly indicates the type of the entry (the default is str). 
-# So far the following are supported:
-# - int     (value will be read as int)
-# - float   (value will be read as float)
-# - ip      (value will be converted to namedtuple with str "ip" and int "port" fields, format is "ip:port", e.g. "192.168.0.1:5000")
-# - path    (value will be converted to a pathlib Path object)
-#
-# The second option indicates the range, which currently only works for numerical types (float/int).
-# The two values are separate by "...", with the left one being the lower limit and the right one being the upper.
-
 # Addresses ("ip:port")
-mongodb_address|ip: ""
-rabbitmq_address|ip: ""
-measure_detector_address|ip: ""
+mongodb_address|ip: "mongo:27017"
+rabbitmq_address|ip: "rabbitmq:5672"
+measure_detector_address|ip: "measure-detector:8000"
 
 # Mongo DB
 db_name: "trompa_test"
@@ -51,26 +39,25 @@ mq_task_passthrough: "task_passthrough_queue"
 
 # Paths
 upload_folder|path: "/omr_files/"
-base_sheet_path|path: "/home/ubuntu/omr_files"
+base_sheet_path|path: "/omr_files/"
 
 # Github
-delete_if_exists|bool: true  # Delete github repo if it already exists. Mostly for testing, should be off in production to prevent accidental deletions
-only_commit_if_changed|bool: true  # Only commit when there was a change
-github_enable|bool: true
 github_user: ""
 github_token: ""
 github_organization: ""
 github_branch: ""
+delete_if_exists|bool: true  # Delete github repo if it already exists. Mostly for testing, should be off in production to prevent accidental deletions
+only_commit_if_changed|bool: true  # Only commit when there was a change
+github_enable|bool: true
 
 # Aggregator
-aggregator_consensus_tolerance|float: 0.0
 aggregator_xml_threshold|float|0...1: 0.6
 aggregator_form_threshold|float|0...1: 0.6
 
 # Other
 skip_measure_detection|bool: false # Assumes there's a pre-made skeleton present already for the score if true
-use_cert|bool: true
-ce_server: ""
+use_cert|bool: false
+ce_server: "https://api-test.trompamusic.eu/" # Should be dummy server
 current_server: ""
 entrypoint_id: ""
 processing_potentialaction_id: ""

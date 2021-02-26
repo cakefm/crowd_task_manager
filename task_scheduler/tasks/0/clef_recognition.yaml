@@ -1,0 +1,8 @@
+steps:                            # Ordered steps for this task, each step has a 'name' and 'requirements'
+- name: edit
+  requirements : []               # List of UI requirements for this task step
+  min_responses: 3                # Minimum amount of responses needed before *something* will happen
+  result_type: "xml"              # Type of result, either of: xml, form
+
+prioritization: page_order        # Any of the functions in priority_functions.py
+slice_type: "measures:1"          # Any of: measures, lines, pages. Add ':' with a number behind to specify specific tuples (e.g. add ':2' to only match double measures)

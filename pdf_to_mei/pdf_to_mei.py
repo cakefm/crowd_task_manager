@@ -3,10 +3,10 @@ import pika
 import json
 
 sys.path.append("..")
-import common.settings as settings
+from common.settings import cfg
 import common.file_system_manager as fsm
 
-import measure_detector.folder_to_mei as to_mei
+import measure_detector.folder_to_mei_imgmd as to_mei
 
 from pymongo import MongoClient
 from bson.objectid import ObjectId
@@ -15,18 +15,18 @@ from pathlib import Path
 
 
 connection = pika.BlockingConnection(pika.ConnectionParameters(
-    settings.rabbitmq_address[0],
-    settings.rabbitmq_address[1]
+    cfg.rabbitmq_address.ip,
+    cfg.rabbitmq_address.port
     ))
 channel = connection.channel()
-channel.queue_declare(queue=settings.new_item_queue_name)
+channel.queue_declare(queue=cfg.mq_new_item)
 
 
 def add_to_queue(queue, routing_key, msg):
     connection = pika.BlockingConnection(
         pika.ConnectionParameters(
-            host=settings.rabbitmq_address[0],
-            port=settings.rabbitmq_address[1]))
+            host=cfg.rabbitmq_address.ip,
+            port=cfg.rabbitmq_address.port))
     channel = connection.channel()
     channel.queue_declare(queue=queue)
     channel.basic_publish(exchange='', routing_key=routing_key, body=msg)
@@ -40,10 +40,10 @@ def callback(ch, method, properties, body):
 
     # Initiate mongo client and sheet collection
     client = MongoClient(
-        settings.mongo_address[0],
-        int(settings.mongo_address[1]))
-    db = client.trompa_test
-    sheet_collection = db[settings.sheet_collection_name]
+        cfg.mongodb_address.ip,
+        cfg.mongodb_address.port)
+    db = client[cfg.db_name]
+    sheet_collection = db[cfg.col_sheet]
 
     # Get PDF sheet entry
     pdf_sheet = sheet_collection.find_one(ObjectId(pdf_id))
@@ -55,27 +55,35 @@ def callback(ch, method, properties, body):
 
     # PDF -> JPEG
     print("Converting PDF to JPEG page images...")
-    pages = convert_from_path(pdf_sheet_path.absolute(), 300)
+    i = 1
+    pages = []
     img_pages_path = fsm.get_sheet_pages_directory(pdf_sheet_name)
-    for index, page in enumerate(pages):
-        page_path = img_pages_path / f'page_{index}.jpg'
-        page.save(page_path, 'JPEG')
-        sheet_collection.update_one({'sheet_path': str(pdf_sheet_path)},
-                                    {'$push': {'pages_path': str(page_path)}},
-                                    upsert=True)
-        print(f"{index} pages out of {len(pages)}")
-    print("DONE")
+    while True:
+        try:
+            page = convert_from_path(pdf_sheet_path.absolute(), 300, first_page=i, last_page=i+1)[0]
+            page_path = img_pages_path / f'page_{i}.jpg'
+            page.save(page_path, 'JPEG')
+            sheet_collection.update_one({'sheet_path': str(pdf_sheet_path)},
+                                        {'$push': {'pages_path': str(page_path)}})
+            del page
+            print(f"{i} pages out of {len(pages)}")
+        except:
+            print("Reached end of PDF")
+            break
+        i += 1
+    print("PDF conversion finished succesfully!")
 
     # JPEG -> MEI
-    print("Converting JPEG pages to MEI skeleton...")
-    to_mei.run(pdf_sheet_name)
+    if (fsm.skeleton_exists(pdf_sheet_name)):
+        print("Using pre-existing skeleton, skipping measure detection...")
+    else:
+        print("Converting JPEG pages to MEI skeleton via measure detector...")
+        to_mei.run(pdf_sheet_name, connection)
 
     # Update sheet on mongo
-    # TODO: This doesn't seem necessary given that the mei will always be called "aligned.mei", the fsm can handle the paths
     mei_path = fsm.get_sheet_whole_directory(pdf_sheet_name) / "aligned.mei"
     sheet_collection.update_one({'_id': ObjectId(pdf_id)},
-                                {'$push': {'mei_path': str(mei_path)}},
-                                upsert=True)
+                                {'$push': {'mei_path': str(mei_path)}})
 
     # Output name to sheet queue
     status_update_msg = {
@@ -84,8 +92,8 @@ def callback(ch, method, properties, body):
         'status': 'complete',
         'name': pdf_sheet_name}
     add_to_queue(
-        'status_queue',
-        'status_queue',
+        cfg.mq_omr_planner_status,
+        cfg.mq_omr_planner_status,
         json.dumps(status_update_msg))
     print(f"Published PDF->MEI converted sheet {pdf_sheet_name} to message queue!")
 
@@ -96,10 +104,10 @@ def main():
         while True:
             connection = pika.BlockingConnection(
                 pika.ConnectionParameters(
-                    host=settings.rabbitmq_address[0],
-                    port=settings.rabbitmq_address[1]))
+                    host=cfg.rabbitmq_address.ip,
+                    port=cfg.rabbitmq_address.port))
             channel = connection.channel()
-            method_frame, header_frame, body = channel.basic_get(settings.new_item_queue_name)
+            method_frame, header_frame, body = channel.basic_get(cfg.mq_new_item)
             if method_frame:
                 channel.basic_ack(method_frame.delivery_tag)
                 callback(channel, method_frame, '', body)

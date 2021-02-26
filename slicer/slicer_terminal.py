@@ -5,7 +5,7 @@ import os
 import sys
 
 sys.path.append("..")
-import common.settings as settings
+from common.settings import cfg
 
 from slicer import Score, Slice
 from pymongo import MongoClient
@@ -63,21 +63,21 @@ if args.line != None and args.line >= 0 and args.line < score.get_line_count():
         save_slice(score_slice, measure_path)
 
 if args.store_in_db:
-    address = settings.mongo_address
-    client = MongoClient(address[0], int(address[1]))
-    db = client.trompa_test
+    address = cfg.mongodb_address
+    client = MongoClient(address.ip, address.port)
+    db = client[cfg.db_name]
 
-    res = db[settings.score_collection_name].insert_one(score.to_db_dict())
+    res = db[cfg.col_score].insert_one(score.to_db_dict())
     print(f"added entry {res.inserted_id} to scores collection")
     for score_slice in stored_slices:
-        res = db[settings.slice_collection_name].insert_one(score_slice.to_db_dict())
+        res = db[cfg.col_slice].insert_one(score_slice.to_db_dict())
         print(f"added entry {res.inserted_id} to slices collection")
 
 if args.message_queue:
-    address = settings.rabbitmq_address
-    connection = pika.BlockingConnection(pika.ConnectionParameters(address[0], address[1]))
+    address = cfg.rabbitmq_address
+    connection = pika.BlockingConnection(pika.ConnectionParameters(address.ip, address.port))
     channel = connection.channel()
-    channel.queue_declare(queue=settings.score_queue_name)
-    channel.basic_publish(exchange='', routing_key=settings.score_queue_name, body=json.dumps({"name": score.name}))
+    channel.queue_declare(queue=cfg.mq_score)
+    channel.basic_publish(exchange='', routing_key=cfg.mq_score, body=json.dumps({"name": score.name}))
     print(f"Published processed score {score.name} to message queue!")
     connection.close()

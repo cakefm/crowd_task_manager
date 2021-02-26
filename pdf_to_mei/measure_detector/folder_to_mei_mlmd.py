@@ -1,8 +1,9 @@
-def run(sheet_name):
+def run(sheet_name, connection):
     import datetime
     import sys
     sys.path.append("..")
     import common.file_system_manager as fsm
+    from common.settings import cfg
 
     from glob import glob
     import json
@@ -21,7 +22,9 @@ def run(sheet_name):
     <mei xmlns="http://www.music-encoding.org/ns/mei">
         <meiHead>
             <fileDesc>
-                <titleStmt/>
+                <titleStmt>
+                    <title/>
+                </titleStmt>
                 <pubStmt/>
             </fileDesc>
              <encodingDesc>
@@ -65,14 +68,15 @@ def run(sheet_name):
 
     # Detect measures
     page_path = fsm.get_sheet_pages_directory(sheet_name)
-    image_paths = [str(p.resolve()) for p in page_path.iterdir() if p.is_file()]
+    image_paths = sorted([str(p.resolve()) for p in page_path.iterdir() if p.is_file()], key = lambda x : int(os.path.basename(x).split('_')[1].split('.')[0]))
 
     pages = []
 
     tqdm.write(f'Detecting measures in {len(image_paths)} images...')
     for image_path in tqdm(image_paths, unit='img'):
         with open(image_path, 'rb') as image:
-            response = requests.post('http://localhost:8000/upload', files={'image': image})
+            address = ":".join(map(str, cfg.measure_detector_address))
+            response = requests.post(f'http://{address}/upload', files={'image': image})
         measures = json.loads(response.content.decode('utf-8'))['measures']
         pages.append({'path': image_path, 'measures': measures})
 
