@@ -10,7 +10,7 @@ Flask==1.1.1
 idna==2.9
 itsdangerous==1.1.0
 Jinja2==2.11.1
-lxml==4.4.2
+lxml==4.6.2
 MarkupSafe==1.1.1
 netifaces==0.10.4
 pdf2image==1.11.0
