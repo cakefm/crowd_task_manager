@@ -55,6 +55,8 @@ def callback(ch, method, properties, body):
 
     # PDF -> JPEG
     print("Converting PDF to JPEG page images...")
+    # This awkward loop is done to prevent pdf2image from loading the entire PDF into memory
+    # which for some reason costs several gigabytes for large sheets...
     i = 1
     pages = []
     img_pages_path = fsm.get_sheet_pages_directory(pdf_sheet_name)
@@ -74,7 +76,7 @@ def callback(ch, method, properties, body):
     print("PDF conversion finished succesfully!")
 
     # JPEG -> MEI
-    if (fsm.skeleton_exists(pdf_sheet_name)):
+    if cfg.skip_measure_detection and fsm.skeleton_exists(pdf_sheet_name):
         print("Using pre-existing skeleton, skipping measure detection...")
     else:
         print("Converting JPEG pages to MEI skeleton via measure detector...")
