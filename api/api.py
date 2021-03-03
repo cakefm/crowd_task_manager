@@ -570,9 +570,10 @@ def get_task(variable):
 if __name__ == "__main__":
     app.debug = True
     print('in the main')
+    api_port = 443 if 'API_PORT' not in os.environ else int(os.environ['API_PORT'])
     if cfg.use_cert:
         context = ('crowdmanager_eu.crt', 'crowdmanager.eu.key')
-        app.run(host='0.0.0.0', port=443, ssl_context=context)
+        app.run(host='0.0.0.0', port=api_port, ssl_context=context)
     else:
         app.secret_key = os.urandom(24)
-        app.run(host='0.0.0.0', port=443)
+        app.run(host='0.0.0.0', port=api_port)

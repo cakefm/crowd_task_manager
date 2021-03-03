@@ -56,7 +56,7 @@ aggregator_xml_threshold|float|0...1: 0.6
 aggregator_form_threshold|float|0...1: 0.6
 
 # Other
-skip_measure_detection|bool: false # Assumes there's a pre-made skeleton present already for the score if true
+skip_measure_detection|bool: false # Use existing MEI if true and found, otherwise will overwrite with fresh skeleton
 use_cert|bool: false
 ce_server: "" # Should be dummy server
 current_server: "http://localhost:8080"

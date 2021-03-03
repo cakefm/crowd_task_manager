@@ -23,14 +23,16 @@ services:
   trompa:
     build: .
     ports:
-      - "443:443"
+      - ${TROMPA_API_PORT}:${TROMPA_API_PORT}
     depends_on:
       - mongo
       - rabbitmq
     volumes:
-      - ./scriptoria/src/assets/omr_files:/omr_files
-    command:  sh -c "./wait && ./docker_test_start.sh"
+      - ./scriptoria/src/assets/omr_files:/omr_files      
+    command:  sh -c "./wait && ./bash_scripts/docker_start.sh"
     tty: true
     privileged: true
     environment:
       WAIT_HOSTS: mongo:27017, rabbitmq:5672
+      MODE: ${TROMPA_BACKEND_MODE}
+      API_PORT: ${TROMPA_API_PORT}
