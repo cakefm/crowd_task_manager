@@ -59,7 +59,7 @@ aggregator_form_threshold|float|0...1: 0.6
 skip_measure_detection|bool: false # Use existing MEI if true and found, otherwise will overwrite with fresh skeleton
 use_cert|bool: false
 ce_server: "" # Should be dummy server
-current_server: "http://localhost:8080"
+current_server: "http://localhost:8080/"
 entrypoint_id: ""
 processing_potentialaction_id: ""
 verify_potentialaction_id: ""
