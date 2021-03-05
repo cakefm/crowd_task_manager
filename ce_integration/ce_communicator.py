@@ -33,7 +33,7 @@ MONGO_DB = cfg.db_name
 ENTRYPOINT_ID = cfg.entrypoint_id
 PROCESSING_POTENTIALACTION_ID = cfg.processing_potentialaction_id
 VERIFY_POTENTIALACTION_ID = cfg.verify_potentialaction_id
-ALLOWED_EXTENSIONS = {'txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif'}
+ALLOWED_EXTENSIONS = {'pdf'}
 UPLOAD_FOLDER = str(Path.home() / cfg.upload_folder)
 
 def add_to_queue(queue, routing_key, msg):
@@ -128,12 +128,15 @@ def poll_controlactions():
             if controlaction_id in known_campaigns:
                 continue
             if controlaction_id not in known_campaigns:
-                print(controlaction_id, " not currently known")
-                identifier = store_sheet(source, potentialActionIdentifier, digitaldocument_id, controlaction_id)
-                known_campaigns.append(controlaction_id)
-                message = {'score_name': name_only, '_id': identifier}
-                add_to_queue(cfg.mq_omr_planner, cfg.mq_omr_planner, json.dumps(message))
-                # send message to omr planner that there is a new sheet
+                a = urlparse(source)
+                filename = os.path.basename(a.path)
+                if allowed_file(filename):
+                    print(controlaction_id, " not currently known")
+                    identifier = store_sheet(source, potentialActionIdentifier, digitaldocument_id, controlaction_id)
+                    known_campaigns.append(controlaction_id)
+                    message = {'score_name': name_only, '_id': identifier}
+                    add_to_queue(cfg.mq_omr_planner, cfg.mq_omr_planner, json.dumps(message))
+                    # send message to omr planner that there is a new sheet
 
 def update_control_action_status(identifier, action_status):
     url = CE_SERVER
@@ -346,9 +349,15 @@ def main():
                             msg['task_type'],      # name of the task type
                             msg['mei_url'],        # mei url that points to the correct branch and commit for this task group
                             'CompletedActionStatus')
+                    elif msg['action'] == 'task group set active':
+                        update_task_group(
+                            msg['score_name'],     # score name, the name field in the sheets collection
+                            msg['task_type'],      # name of the task type
+                            msg['mei_url'],        # mei url that points to the correct branch and commit for this task group
+                            'ActiveActionStatus')
                     elif msg['action'] == 'task completed':
                         update_control_action_status(
-                            msg['_id'],            # _id of the task in the tasks collection
+                            msg['task_id'],            # _id of the task in the tasks collection
                             'CompletedActionStatus')
                     channel.basic_ack(method_frame.delivery_tag)
                 channel.close()
