@@ -269,7 +269,7 @@ def consensus_bnd_override_inner(nodes, distance_function=node_distance):
     head = nodes[0]
     tail = nodes[1:]
 
-    if head.tagName in ["measure", "layer", "staff"]:
+    if head.tagName in ["measure", "layer", "staff", "sb", "pb", "scoreDef", "staffGrp", "staffDef"]:
         for node in tail:
             if node.tagName == GAP_ELEMENT_NAME:
                 return head, True, True
