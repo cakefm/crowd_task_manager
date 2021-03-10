@@ -518,13 +518,10 @@ def initialize_stage(message, channel):
     score_name = message["name"]
     stage = determine_current_stage(score_name)
 
-    # Purge all old batches and tasks, clean up message history
-    #
-    # TODO: Consider whether this is a good idea, potentially we need to clear
-    # more collections, or not clear these at all
-    db[cfg.col_task].drop()
-    db[cfg.col_task_batch].drop()
-    message_history.clear()
+    # Purge all old batches and tasks for this score, clean up message history
+    db[cfg.col_task].delete_many({"score": score_name})
+    db[cfg.col_task_batch].delete_many({"score": score_name})
+    message_history.clear() # TODO: It's probably important to do this per score as well...
 
     # Send message for task types to CE
     for task_type in task_types:

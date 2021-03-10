@@ -1,0 +1,1 @@
+ID=$(docker ps -aqf "name=crowd-task-manager-docker_trompa") && docker exec -it $ID /bin/bash
