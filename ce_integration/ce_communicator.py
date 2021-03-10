@@ -53,10 +53,7 @@ def allowed_file(filename):
         filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 
-def store_sheet(source, potentialActionIdentifier, DigitalDocument_id, ControlAction_id):
-    a = urlparse(source)
-    filename = os.path.basename(a.path)
-    name_only = os.path.splitext(filename)[0]
+def store_sheet(source, filename, potentialActionIdentifier, DigitalDocument_id, ControlAction_id):
     if allowed_file(filename):
         # prep data location
         filename = secure_filename(filename)
@@ -117,22 +114,23 @@ def poll_controlactions():
             name = action['object'][node_nr]['nodeValue']['name']
             source = action['object'][node_nr]['nodeValue']['source']
             potentialActionIdentifier = "" if (len(action["object"]) < 2) else action['object'][node_nr_action]['value']
-            a = urlparse(source)
-            filename = os.path.basename(a.path)
-            name_only = os.path.splitext(filename)[0]
+
             digitaldocument_id = action['object'][node_nr]['nodeValue']['identifier']
             controlaction_id = action['identifier']
+            a = urlparse(source)
+            filename = os.path.basename(a.path)
+            temp_name, temp_ext = os.path.splitext(filename)
+            name_only = temp_name + '-' + digitaldocument_id
+            filename = name_only + temp_ext
             # TODO: check if filename is pdf or other allowed format
             if controlaction_id in blacklist:
                 continue
             if controlaction_id in known_campaigns:
                 continue
             if controlaction_id not in known_campaigns:
-                a = urlparse(source)
-                filename = os.path.basename(a.path)
                 if allowed_file(filename):
                     print(controlaction_id, " not currently known")
-                    identifier = store_sheet(source, potentialActionIdentifier, digitaldocument_id, controlaction_id)
+                    identifier = store_sheet(source, filename, potentialActionIdentifier, digitaldocument_id, controlaction_id)
                     known_campaigns.append(controlaction_id)
                     message = {'score_name': name_only, '_id': identifier}
                     add_to_queue(cfg.mq_omr_planner, cfg.mq_omr_planner, json.dumps(message))
