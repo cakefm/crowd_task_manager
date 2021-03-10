@@ -14,26 +14,7 @@ from pdf2image import convert_from_path
 from pathlib import Path
 
 
-connection = pika.BlockingConnection(pika.ConnectionParameters(
-    cfg.rabbitmq_address.ip,
-    cfg.rabbitmq_address.port
-    ))
-channel = connection.channel()
-channel.queue_declare(queue=cfg.mq_new_item)
-
-
-def add_to_queue(queue, routing_key, msg):
-    connection = pika.BlockingConnection(
-        pika.ConnectionParameters(
-            host=cfg.rabbitmq_address.ip,
-            port=cfg.rabbitmq_address.port))
-    channel = connection.channel()
-    channel.queue_declare(queue=queue)
-    channel.basic_publish(exchange='', routing_key=routing_key, body=msg)
-    connection.close()
-
-
-def callback(ch, method, properties, body):
+def callback(channel, method, properties, body):
     # Decode body and obtain pdf id
     data = json.loads(body)
     pdf_id = data['_id']
@@ -92,30 +73,29 @@ def callback(ch, method, properties, body):
         '_id': pdf_id,
         'module': 'measure_detector',
         'status': 'complete',
-        'name': pdf_sheet_name}
-    add_to_queue(
-        cfg.mq_omr_planner_status,
-        cfg.mq_omr_planner_status,
-        json.dumps(status_update_msg))
+        'name': pdf_sheet_name
+    }
+
+    channel.basic_publish(
+        exchange='',
+        routing_key=cfg.mq_omr_planner_status,
+        body=json.dumps(status_update_msg)
+    )
+    channel.basic_ack(method.delivery_tag)
     print(f"Published PDF->MEI converted sheet {pdf_sheet_name} to message queue!")
 
 
-def main():
-    try:
-        print('PDF to MEI converter is listening...')
-        while True:
-            connection = pika.BlockingConnection(
-                pika.ConnectionParameters(
-                    host=cfg.rabbitmq_address.ip,
-                    port=cfg.rabbitmq_address.port))
-            channel = connection.channel()
-            method_frame, header_frame, body = channel.basic_get(cfg.mq_new_item)
-            if method_frame:
-                channel.basic_ack(method_frame.delivery_tag)
-                callback(channel, method_frame, '', body)
-    except KeyboardInterrupt:
-        print('interrupted!')
-
-
 if __name__ == "__main__":
-    main()
+    connection = pika.BlockingConnection(pika.ConnectionParameters(
+        cfg.rabbitmq_address.ip,
+        cfg.rabbitmq_address.port
+    ))
+    channel = connection.channel()
+    channel.queue_declare(queue=cfg.mq_new_item)
+
+    channel.basic_consume(
+        on_message_callback=callback,
+        queue=cfg.mq_new_item
+    )
+    print('PDF to MEI converter is listening...')
+    channel.start_consuming()

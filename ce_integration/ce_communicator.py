@@ -103,13 +103,52 @@ def poll_controlactions():
     mydoc = mycol.find(myquery)
 
     known_campaigns = []
-    blacklist = ['2744d89c-163d-4081-8dc1-0fcaee2972f5','db568c1a-d213-4e88-9546-1ecb776bacc4','d0ca5f40-6cc7-49cb-9d88-8c2257987d8b','69904b30-81fc-4506-8ef3-04f480d33762','c57426e6-a995-4703-af55-4adb0f454a9d','f9530dd8-80dc-4875-872e-612c230eb038','60fbf663-2403-4023-98ac-18ebbc8c84e3','393b2764-76aa-4d48-9c25-fb8664d12d21','15c99b6b-6366-404f-8892-2650bea1d5bb','1807dca1-653a-4151-ad88-483a29e879b0','3d1cf563-4523-4a60-84c6-a429e88a43ac','ba4314b7-2f47-4d6f-81d1-8bafb8b8f22c','ddefaa59-ddc9-4089-94fc-13a7ed11a4ef','08f64d9f-7030-4ebd-80f0-a4dabe2df658','e1699130-4507-4796-8ffb-aa2b46770576','d529d2d5-7556-4833-b40f-0ba39ca96878','83f0da90-3f8e-4518-aeac-ab3547b88bc3','45568fb3-e55c-48d1-9103-fc6cb33d8b04','19d40370-c0a4-4f54-b1b8-c0aa16b02f7c','bd48ac24-addc-4a9c-9116-912da7a3de7a','f1461b8a-7f5a-44a1-8cae-21ffa0148c0b','73360322-9273-4253-b485-52775831968b','3a260f17-95a4-42b7-8f72-6ae6553de370','f94f9bbb-894b-4128-bfed-134bced15ea6','a6d33f0c-7040-4268-bce1-03d7558d90fd','3b2c3208-dea5-43f9-9f5f-78fa82932645','3ec6f2d2-0022-49cb-ac86-5bc633521a2d','a5a6d7d1-7661-4af4-9b95-f4527ce6c0b2','96368526-a8cb-4a32-b1cc-0b6fdd064b74','e0429016-3c79-4b84-b5cb-f993a7683da7','b2788265-97ab-4af9-a0a1-2792323995b0','34eb208b-ed13-4854-9f6f-cbed0c9273a6','bd501c5e-63a7-4510-9945-ae55851fc429','3684478d-3780-498a-a747-7df10be1920f','9177d5ab-b495-497f-9d99-3a955e2d19d8','4922eef8-518d-4387-93a2-2d9be1f0d608','fbb85243-0a48-4ca4-a42c-a72e161f1420','54612ff7-45d1-4668-a725-d0d91017f4a0','220de35e-6846-411b-8b5a-a5fd47ebf5fa','d0f1d597-b731-42b8-ab95-6ad3fbde81c3','cf05656f-ee99-4548-b842-dd05c1961513','d609e35c-8881-40c3-a06a-61f9b54b2e2f','8781404d-696d-4ddf-9a72-fd1d181a058f','11e6c778-3c49-41ae-8326-ef51241c5da4','ff78c72c-d322-4ec2-8ef9-440a3730ad54','a29a1568-bbcf-49c6-aaaf-731716d8a31f','789c2766-9573-4294-a59a-9db733d68d1d','8f3a9606-9582-405f-9604-1515a347fac4','f2f34d46-aca4-48d3-95ac-53393c713c40','a45fc911-0b48-44d1-92c8-f34dbfb84c4c','c3e41df2-9c1c-496b-b3d0-3e604623a221','51ed878d-68d0-43d6-bbc5-b8265073d2ed','341330cc-5c22-4ee0-b60d-d445ada244ab','ac991c06-343c-4458-bdc6-a00b9e34565f','2cc144d7-c90a-4d48-ba9e-93416ea63e12','44e6694b-0061-4fb4-a6a0-d6f515c913fc','d78b448a-3124-4915-ae33-9db0cd191128','a552fd2d-9256-49ef-9b42-c6c459d5d20d','15aac7ea-be9a-4431-952a-8dd3124baab3','77b58bec-7359-4644-b58e-eda2b34cbbb7','b08282d5-7f8a-460b-8112-0e910ee2760d','ad47d962-4abe-4410-9a00-36b6d2589343','8572c8d8-d2a1-4167-81ee-6891fa55f69b','047af7c1-4681-4204-92c6-89f8ebb08848','9f81b7f3-8142-4e12-8a92-03154ec9094c','9262ba62-7ccf-4a7b-a4da-3060a34d785a','e23fc45c-9112-4637-a65b-d34232cff6eb','bcfd3aa4-44ac-4e09-97b6-4451a84fc65a']
+
+    blacklist = ['2744d89c-163d-4081-8dc1-0fcaee2972f5','db568c1a-d213-4e88-9546-1ecb776bacc4',
+                 'd0ca5f40-6cc7-49cb-9d88-8c2257987d8b','69904b30-81fc-4506-8ef3-04f480d33762',
+                 'c57426e6-a995-4703-af55-4adb0f454a9d','f9530dd8-80dc-4875-872e-612c230eb038',
+                 '60fbf663-2403-4023-98ac-18ebbc8c84e3','393b2764-76aa-4d48-9c25-fb8664d12d21',
+                 '15c99b6b-6366-404f-8892-2650bea1d5bb','1807dca1-653a-4151-ad88-483a29e879b0',
+                 '3d1cf563-4523-4a60-84c6-a429e88a43ac','ba4314b7-2f47-4d6f-81d1-8bafb8b8f22c',
+                 'ddefaa59-ddc9-4089-94fc-13a7ed11a4ef','08f64d9f-7030-4ebd-80f0-a4dabe2df658',
+                 'e1699130-4507-4796-8ffb-aa2b46770576','d529d2d5-7556-4833-b40f-0ba39ca96878',
+                 '83f0da90-3f8e-4518-aeac-ab3547b88bc3',
+                 '19d40370-c0a4-4f54-b1b8-c0aa16b02f7c','bd48ac24-addc-4a9c-9116-912da7a3de7a',
+                 'f1461b8a-7f5a-44a1-8cae-21ffa0148c0b','73360322-9273-4253-b485-52775831968b',
+                 '3a260f17-95a4-42b7-8f72-6ae6553de370','f94f9bbb-894b-4128-bfed-134bced15ea6',
+                 'a6d33f0c-7040-4268-bce1-03d7558d90fd','3b2c3208-dea5-43f9-9f5f-78fa82932645',
+                 '3ec6f2d2-0022-49cb-ac86-5bc633521a2d','a5a6d7d1-7661-4af4-9b95-f4527ce6c0b2',
+                 '96368526-a8cb-4a32-b1cc-0b6fdd064b74','e0429016-3c79-4b84-b5cb-f993a7683da7',
+                 'b2788265-97ab-4af9-a0a1-2792323995b0','34eb208b-ed13-4854-9f6f-cbed0c9273a6',
+                 'bd501c5e-63a7-4510-9945-ae55851fc429','3684478d-3780-498a-a747-7df10be1920f',
+                 '9177d5ab-b495-497f-9d99-3a955e2d19d8','4922eef8-518d-4387-93a2-2d9be1f0d608',
+                 'fbb85243-0a48-4ca4-a42c-a72e161f1420','54612ff7-45d1-4668-a725-d0d91017f4a0',
+                 '220de35e-6846-411b-8b5a-a5fd47ebf5fa','d0f1d597-b731-42b8-ab95-6ad3fbde81c3',
+                 'cf05656f-ee99-4548-b842-dd05c1961513','d609e35c-8881-40c3-a06a-61f9b54b2e2f',
+                 '8781404d-696d-4ddf-9a72-fd1d181a058f','11e6c778-3c49-41ae-8326-ef51241c5da4',
+                 'ff78c72c-d322-4ec2-8ef9-440a3730ad54','a29a1568-bbcf-49c6-aaaf-731716d8a31f',
+                 '789c2766-9573-4294-a59a-9db733d68d1d','8f3a9606-9582-405f-9604-1515a347fac4',
+                 'f2f34d46-aca4-48d3-95ac-53393c713c40','a45fc911-0b48-44d1-92c8-f34dbfb84c4c',
+                 'c3e41df2-9c1c-496b-b3d0-3e604623a221','51ed878d-68d0-43d6-bbc5-b8265073d2ed',
+                 '341330cc-5c22-4ee0-b60d-d445ada244ab','ac991c06-343c-4458-bdc6-a00b9e34565f',
+                 '2cc144d7-c90a-4d48-ba9e-93416ea63e12','44e6694b-0061-4fb4-a6a0-d6f515c913fc',
+                 'd78b448a-3124-4915-ae33-9db0cd191128','a552fd2d-9256-49ef-9b42-c6c459d5d20d',
+                 '15aac7ea-be9a-4431-952a-8dd3124baab3','77b58bec-7359-4644-b58e-eda2b34cbbb7',
+                 'b08282d5-7f8a-460b-8112-0e910ee2760d','ad47d962-4abe-4410-9a00-36b6d2589343',
+                 '8572c8d8-d2a1-4167-81ee-6891fa55f69b','047af7c1-4681-4204-92c6-89f8ebb08848',
+                 '9f81b7f3-8142-4e12-8a92-03154ec9094c','9262ba62-7ccf-4a7b-a4da-3060a34d785a',
+                 'e23fc45c-9112-4637-a65b-d34232cff6eb','bcfd3aa4-44ac-4e09-97b6-4451a84fc65a']
+    
+    blacklist_digital_documents = ['f55f6192-07c4-489e-aa20-134b0c7c201f',
+                                   'd7f91d1e-8f6f-4930-b75c-f8b0cf534b19',
+                                   '9ce11f4f-ed5b-43b0-ab07-d9299d6ad52e']
+
     for score in mydoc:
         known_campaigns.append(score['controlaction_id'])
 
     for action in json_object["data"]["ControlAction"]:
         if (len(action["object"]) > 0) and (action['actionStatus'] != "FailedActionStatus"):
-            node_nr = 0 if (action['object'][0]['name'] == "Work") else 1
+            node_nr = 0 if (action['object'][0]['name'] == "Work" or (action['object'][0]['name'] == "work")) else 1
             node_nr_action = 0 if (node_nr == 1) else 1
             name = action['object'][node_nr]['nodeValue']['name']
             source = action['object'][node_nr]['nodeValue']['source']
@@ -123,7 +162,7 @@ def poll_controlactions():
             name_only = temp_name + '-' + digitaldocument_id
             filename = name_only + temp_ext
             # TODO: check if filename is pdf or other allowed format
-            if controlaction_id in blacklist:
+            if controlaction_id in blacklist or digitaldocument_id in blacklist_digital_documents:
                 continue
             if controlaction_id in known_campaigns:
                 continue
