@@ -17,6 +17,7 @@ DONE_STEP = "done"
 class TaskType():
     def __init__(self, name, body, db):
         self.name = name
+        self.nice_name = body["name"]
         self.get_task_priority = getattr(priority_functions, body["prioritization"])
         self.steps = OrderedDict({x["name"]: x for x in body["steps"]})
         self.slice_type = body["slice_type"]

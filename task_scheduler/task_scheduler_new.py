@@ -158,6 +158,8 @@ def take_action_on_status(channel, method, properties, body):
                                                         check_stage_completion
                                                     ],
         ("github_update", "complete"):              [
+                                                    ],
+        ("github_update", "failed"):                [
                                                     ]
     }[(module, status)]
 
@@ -524,17 +526,19 @@ def initialize_stage(message, channel):
     message_history.clear() # TODO: It's probably important to do this per score as well...
 
     # Send message for task types to CE
-    for task_type in task_types:
-        send_message(
-            {
-                "action": 'task type created',
-                "score_name": score_name,
-                "name": task_type,
-                "title": task_type
-            },
-            cfg.mq_ce_communicator,
-            channel
-        )
+    for task_type_name in task_types:
+        task_type = task_types[task_type_name]
+        if task_type in stage.task_types:
+            send_message(
+                {
+                    "action": 'task type created',
+                    "score_name": score_name,
+                    "name": task_type_name,
+                    "title": task_type.nice_name
+                },
+                cfg.mq_ce_communicator,
+                channel
+            )
 
     print(f"Initializing stage {stage.order} for score {score_name}")
     create_tasks_and_batches_for_stage(stage, score_name)
