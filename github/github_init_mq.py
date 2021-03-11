@@ -4,6 +4,7 @@ import shutil
 import pika
 import json
 import gc
+import time
 
 from github import Github
 from github import GithubException
@@ -30,6 +31,7 @@ def callback(ch, method, properties, body):
     if cfg.delete_if_exists:
         try:
             org.get_repo(sheet_name).delete()
+            print("Deleted existing repo for", sheet_name)
         except GithubException as e:
             print("Repo doesn't exist, ready for creation!")
             print(str(e))
@@ -41,41 +43,87 @@ def callback(ch, method, properties, body):
 
     # Git
     git_dir_path = fsm.get_clean_sheet_git_directory(sheet_name)
-    clone = pygit2.clone_repository(repo.clone_url, str(git_dir_path))
-    clone.remotes.set_url("origin", repo.clone_url)
+    clone = None
+    tries = 0
+    while clone==None and tries < 5:
+        try:
+            clone = pygit2.clone_repository(repo.clone_url, str(git_dir_path))
+        except pygit2.GitError:
+            print("Could not clone repo at:", repo.clone_url, ", trying again in 1 second...")
+            connection.process_data_events()
+            tries += 1
+            time.sleep(1)
 
-    # Add the PDF
-    pdf_path = fsm.get_sheet_whole_directory(sheet_name) / (sheet_name + ".pdf")
-    shutil.copy(str(pdf_path), str(fsm.get_sheet_git_directory(sheet_name)))
-    commit(clone, "Initialize main branch")
-    push(clone)
+    status = "complete"
+    if clone != None:
 
-    # Add the MEI
-    clone.create_branch(cfg.github_branch, clone.head.peel())
-    branch = clone.lookup_branch(cfg.github_branch)
-    ref = clone.lookup_reference(branch.name)
-    clone.checkout(ref)
+        clone.remotes.set_url("origin", repo.clone_url)
 
-    mei_path = fsm.get_sheet_whole_directory(sheet_name) / "aligned.mei"
-    shutil.copy(str(mei_path), str(fsm.get_sheet_git_directory(sheet_name)))
-    commit(clone, "Initialize crowd manager branch", branch=cfg.github_branch)
-    push(clone, branch=cfg.github_branch)
+        # Add the PDF
+        pdf_path = fsm.get_sheet_whole_directory(sheet_name) / (sheet_name + ".pdf")
+        shutil.copy(str(pdf_path), str(fsm.get_sheet_git_directory(sheet_name)))
+        commit(clone, "Initialize main branch")
 
-    # Protect the newly created/pushed branch and the main branch on Github
-    repo.get_branch("main").edit_protection(user_push_restrictions=[cfg.github_user])
-    repo.get_branch(cfg.github_branch).edit_protection(user_push_restrictions=[cfg.github_user])
+        pushed = False
+        push_tries = 0
+        while not pushed and push_tries < 5:
+            try:
+                push(clone)
+                pushed = True
+            except pygit2.GitError:
+                print(f"Could not push for score {sheet_name}, retrying in 1 second...")
+                connection.process_data_events()
+                push_tries += 1
+                time.sleep(1)
+        if pushed:
+            # Add the MEI
+            clone.create_branch(cfg.github_branch, clone.head.peel())
+            branch = clone.lookup_branch(cfg.github_branch)
+            ref = clone.lookup_reference(branch.name)
+            clone.checkout(ref)
 
-    # Clean up (needed since pygit2 tends to leave files in .git open)
-    del clone
-    del branch
-    del ref
-    gc.collect()
+            mei_path = fsm.get_sheet_whole_directory(sheet_name) / "aligned.mei"
+            shutil.copy(str(mei_path), str(fsm.get_sheet_git_directory(sheet_name)))
+            commit(clone, "Initialize crowd manager branch", branch=cfg.github_branch)
+            pushed_branch = False
+            branch_push_tries = 0
+            while not pushed_branch and branch_push_tries < 5:
+                try:
+                    push(clone, branch=cfg.github_branch, force=True)
+                    pushed_branch = True
+                except pygit2.GitError:
+                    print(f"Could not push for score {sheet_name}, retrying in 1 second...")
+                    connection.process_data_events()
+                    branch_push_tries += 1
+                    time.sleep(1)
+
+            if pushed and pushed_branch:
+                # Protect the newly created/pushed branch and the main branch on Github
+                repo.get_branch("main").edit_protection(user_push_restrictions=[cfg.github_user])
+                repo.get_branch(cfg.github_branch).edit_protection(user_push_restrictions=[cfg.github_user])
+
+            if not pushed_branch:
+                print("Warning, could not push crowd manager's branch for", sheet_name)
+                status = "failed"
+
+            del branch
+            del ref
+        else:
+            print("Warning, could not push initial commit for", sheet_name)
+            status = "failed"
+
+        # Clean up (needed since pygit2 tends to leave files in .git open)
+        del clone
+        gc.collect()
+    else:
+        print("Warning, could not initialize repo for", sheet_name)
+        status = "failed"
 
     # Update status
     status_update_msg = {
         '_id': sheet_id,
         'module': 'github_init',
-        'status': 'complete',
+        'status': status,
         'name': sheet_name
     }
 

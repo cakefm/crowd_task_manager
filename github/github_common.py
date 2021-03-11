@@ -14,7 +14,10 @@ def commit(repo, message, branch="master"):
     oid = repo.create_commit(f"refs/heads/{branch}", signature, signature, message, tree, [repo.head.peel().hex])
     
 
-def push(repo, branch="master"):
+def push(repo, branch="master", force=False):
+    f = ''
+    if force:
+        f = '+'
     remote = repo.remotes["origin"]
     remote.credentials = pygit2.UserPass(cfg.github_user, cfg.github_token)
-    remote.push([f"refs/heads/{branch}"], callbacks=pygit2.RemoteCallbacks(credentials=remote.credentials))
+    remote.push([f"{f}refs/heads/{branch}"], callbacks=pygit2.RemoteCallbacks(credentials=remote.credentials))

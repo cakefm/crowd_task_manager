@@ -38,47 +38,51 @@ def callback(ch, method, properties, body):
 
     # Git
     git_dir_path = fsm.get_sheet_git_directory(sheet_name)
-    clone = pygit2.Repository(str(git_dir_path))
+    status = "complete"
+    try:
+        clone = pygit2.Repository(str(git_dir_path))
 
-    # CAUTION: The assumption is that NOONE ever edits the crowd manager's branch except for the crowdmanager itself
-    # Thus no need to deal with fast-forwarding or merge conflicts
-    clone.remotes[0].fetch()
-    branch = clone.lookup_branch(cfg.github_branch)
-    ref = clone.lookup_reference(branch.name)
-    clone.checkout(ref)
+        # CAUTION: The assumption is that NOONE ever edits the crowd manager's branch except for the crowdmanager itself
+        # Thus no need to deal with fast-forwarding or merge conflicts
+        clone.remotes[0].fetch()
+        branch = clone.lookup_branch(cfg.github_branch)
+        ref = clone.lookup_reference(branch.name)
+        clone.checkout(ref)
 
-    if action=="commit":
-        mei_data = data['mei']
-        changed = True
-        git_mei_path = fsm.get_sheet_git_directory(sheet_name) / "aligned.mei"
+        if action=="commit":
+            mei_data = data['mei']
+            changed = True
+            git_mei_path = fsm.get_sheet_git_directory(sheet_name) / "aligned.mei"
 
-        with open(str(git_mei_path), 'r') as mei_file:
-            if mei_file.read() == mei_data:
-                changed = False
+            with open(str(git_mei_path), 'r') as mei_file:
+                if mei_file.read() == mei_data:
+                    changed = False
 
-        if (cfg.only_commit_if_changed and changed) or not cfg.only_commit_if_changed:
-            # Copy over new MEI
-            with open(str(git_mei_path), 'w') as mei_file:
-                mei_file.write(mei_data)
-            commit(clone, f"Update MEI with task {task_name} of type {task_type}", branch=cfg.github_branch)
-            print(f"Made commit to repo for task {task_id}")
-        else:
-            print(f"No commit/write made, task {task_id} had no changes")
-    elif action=="push":
-        push(clone, branch=cfg.github_branch)
-        print(f"Made push to repo for task {task_id}")
+            if (cfg.only_commit_if_changed and changed) or not cfg.only_commit_if_changed:
+                # Copy over new MEI
+                with open(str(git_mei_path), 'w') as mei_file:
+                    mei_file.write(mei_data)
+                commit(clone, f"Update MEI with task {task_name} of type {task_type}", branch=cfg.github_branch)
+                print(f"Made commit to repo for task {task_id}")
+            else:
+                print(f"No commit/write made, task {task_id} had no changes")
+        elif action=="push":
+            push(clone, branch=cfg.github_branch)
+            print(f"Made push to repo for task {task_id}")
 
-    # Clean up (needed since pygit2 tends to leave files in .git open)
-    del clone
-    del branch
-    del ref
-    gc.collect()
+        # Clean up (needed since pygit2 tends to leave files in .git open)
+        del clone
+        del branch
+        del ref
+        gc.collect()
+    except pygit2.GitError:
+        status = "failed"
 
     # Update status
     status_update_msg = {
         '_id': task_id,
         'module': 'github_update',
-        'status': 'complete',
+        'status': status,
         'name': sheet_name
     }
 
