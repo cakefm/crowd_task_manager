@@ -539,6 +539,18 @@ def initialize_stage(message, channel):
                 cfg.mq_ce_communicator,
                 channel
             )
+            url = f"https://github.com/{cfg.github_organization}/{score_name}/tree/{cfg.github_branch}"
+            send_message(
+                {
+                    "action": "task group set active",
+                    "score_name": score_name,
+                    "task_type": task_type_name,
+                    "mei_url": url
+                },
+                cfg.mq_ce_communicator,
+                channel
+            )
+            print(f"Sent creation and activation request for task type {task_type} for score {score_name} to the CE")
 
     print(f"Initializing stage {stage.order} for score {score_name}")
     create_tasks_and_batches_for_stage(stage, score_name)
