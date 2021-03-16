@@ -20,6 +20,7 @@ def callback(ch, method, properties, body):
     data = json.loads(body)
     task_id = data['task_id']
     task = db[cfg.col_task].find_one({"_id": ObjectId(task_id)})
+    responses_needed = int(task["responses_needed"])
 
     results = []
     results_query = db[cfg.col_result].find({
@@ -43,7 +44,7 @@ def callback(ch, method, properties, body):
     }
 
     # For now, only consider the tree to be good enough if consensus was reached for every node
-    if sum(consensus_per_node.values()) < len(consensus_per_node):
+    if sum(consensus_per_node.values()) < len(consensus_per_node) and responses_needed > 1:
         status_update_msg['status'] = 'failed'
     else:
         # store aggregated result in db
