@@ -102,6 +102,8 @@ def node_distance_anchored(a, b, ignored = IGNORE):
     if a_n != "" and b_n != "":
         if a_n==b_n and a.tagName==b.tagName:
             distance = 0
+        if a_n!=b_n:
+            distance += 1000
 
     a_crmp = a.getAttribute("crmp_id")
     b_crmp = b.getAttribute("crmp_id")
