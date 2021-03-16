@@ -158,16 +158,15 @@ def take_action_on_status(channel, method, properties, body):
 
         # For now just send to slicer
         # TODO: maybe later we should send to aligner first?
-        if stage in {0, 1}:
-            print("Sending to slicer to rebuild")
-            send_message(
-                {
-                    '_id': score_status['_id'],
-                    'name': score_status['name']
-                },
-                cfg.mq_slicer,
-                channel
-            )
+        print("Sending to slicer to rebuild")
+        send_message(
+            {
+                '_id': score_status['_id'],
+                'name': score_status['name']
+            },
+            cfg.mq_slicer,
+            channel
+        )
         ack()
     elif module == 'task_scheduler' and 'task_type' in score_status:
         # Here we should let the CE know some task type has been completed
