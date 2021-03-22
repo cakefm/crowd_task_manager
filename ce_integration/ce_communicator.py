@@ -159,9 +159,9 @@ def poll_controlactions():
             a = urlparse(source)
             filename = os.path.basename(a.path)
             temp_name, temp_ext = os.path.splitext(filename)
-            name_only = temp_name + '-' + digitaldocument_id
+            name_only = digitaldocument_id
             filename = name_only + temp_ext
-            # TODO: check if filename is pdf or other allowed format
+
             if controlaction_id in blacklist or digitaldocument_id in blacklist_digital_documents:
                 continue
             if controlaction_id in known_campaigns:
