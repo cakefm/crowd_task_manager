@@ -92,24 +92,21 @@ def node_distance(a, b, ignored = IGNORE):
     
     return penalty
 
-# Make it beneficial to match on index if present
-# Punish mismatches in crmp_id if present
-# Should work as long as there aren't nodes in the same list of children with the same index
+# Make it beneficial to match on index if present, and punish mismatches
 def node_distance_anchored(a, b, ignored = IGNORE):
     distance = node_distance(a, b, ignored)
     a_n = a.getAttribute("n")
     b_n = b.getAttribute("n")
-    if a_n != "" and b_n != "":
-        if a_n==b_n and a.tagName==b.tagName:
-            distance = 0
-        if a_n!=b_n:
-            distance += 1000
+    if a.tagName==b.tagName:
+        if a_n != "" and b_n != "":
+            if a_n==b_n:
+                distance = -1
+            if a_n!=b_n:
+                distance += 10000
 
-    a_crmp = a.getAttribute("crmp_id")
-    b_crmp = b.getAttribute("crmp_id")
-    if a_crmp != "" and b_crmp != "":
-        if a_crmp != b_crmp:
-            distance += 1000
+    # NEVER try to match to page breaks or section breaks
+    if a.tagName in ["pb", "sb"] or b.tagName in ["pb", "sb"]:
+        distance += 10000
 
     return distance
 
@@ -135,7 +132,7 @@ def align_trees_pairwise(tree1, tree2, distance_function=node_distance, gap_pena
     return score
 
 
-def align_trees_multiple(trees, distance_function=node_distance, gap_penalty=GAP_PENALTY):
+def align_trees_multiple(trees, distance_function=node_distance, gap_penalty=GAP_PENALTY, verbose=False):
     # If we just have one tree, don't do anything fancy and just return that one
     if len(trees)==1:
         return [tt.purge_non_element_nodes(xml.parseString(trees[0]))]
@@ -174,12 +171,13 @@ def align_trees_multiple(trees, distance_function=node_distance, gap_penalty=GAP
         main_tree = pair[pair_index.index(main_tree_index)]
         cand_tree = pair[not pair_index.index(main_tree_index)]
 
-        print(f"ITERATION {candidate_pairs.index(pair_index)}:")
-        print("===MAIN:")
-        print(main_tree.toprettyxml())
-        print("===CAND:")
-        print(cand_tree.toprettyxml())
-        print()
+        if verbose:
+            print(f"ITERATION {candidate_pairs.index(pair_index)}:")
+            print("===MAIN:")
+            print(main_tree.toprettyxml())
+            print("===CAND:")
+            print(cand_tree.toprettyxml())
+            print()
 
         # Copy the gaps
         for tree in mas:
@@ -187,23 +185,24 @@ def align_trees_multiple(trees, distance_function=node_distance, gap_penalty=GAP
 
         mas.append(cand_tree)
 
-        print("===RESULT SO FAR:")
-        for tree in mas:
+        if verbose:
+            print("===RESULT SO FAR:")
+            for tree in mas:
+                print(tree.toprettyxml())
+                print("============")
+
+            print()
+            print()
+            print()
+            print("------------------------------------------------")
+
+    if verbose:
+        print("===FINAL RESULTS:")
+        for index, tree in enumerate(mas):
+            print(f"TREE AT INDEX {index}:")
             print(tree.toprettyxml())
             print("============")
 
-        print()
-        print()
-        print()
-        print("------------------------------------------------")
-
-    # Too spammy, since we use the aggregator in the score rebuilder: the above prints do not trigger for 2-tree alignments
-
-    # print("===FINAL RESULTS:")
-    # for index, tree in enumerate(mas):
-    #     print(f"TREE AT INDEX {index}:")
-    #     print(tree.toprettyxml())
-    #     print("============")
     return mas
 
 
