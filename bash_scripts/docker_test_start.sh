@@ -13,6 +13,7 @@ declare -a modules=(
     "score_rebuilder/score_rebuilder_mq.py"
     "form_processor/form_processor_mq.py"
     "api/api.py"
+    "task_scheduler/task_passthrough.py"
 )
 
 for path in "${modules[@]}"
@@ -22,7 +23,7 @@ do
     stem=$(echo $bname | cut -d. -f1)
     echo Starting $stem...
     cd $dname
-    screen -L -Logfile "${bname}.log" -dm -S $stem python3 $bname
+    screen -L -Logfile "/logs/${bname}.log" -dm -S $stem python3 $bname
 done
 
 
@@ -32,13 +33,8 @@ do
 sleep 0.1 
 done
 echo "Sending PDF..."
-curl -F file=@/root/crowd-task-manager/testing_resources/pdf/beethoven_orchestra_2_pages.pdf -F "mei=@/dev/null;filename=" http://localhost:${API_PORT}/upload
+curl -F file=@/root/crowd-task-manager/testing_resources/pdf/beethoven_orchestra_p1.pdf -F "mei=@/dev/null;filename=" http://localhost:${API_PORT}/upload
 echo "PDF sent succesfully!"
-
-# Modules required for testing setup
-# echo 'starting task_passthrough'
-# cd $HOME/crowd-task-manager/task_scheduler
-# screen -L -Logfile screen_log_task_passthrough -dm -S task_passthrough python3 task_passthrough.py
 
 # Module to view screen of after start-up
 screen -r task_scheduler_new

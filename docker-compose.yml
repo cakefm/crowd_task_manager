@@ -4,13 +4,12 @@ services:
     image: "mongo"
     expose:
       - 27017
+    command: --quiet
   mongo-express:
     image: mongo-express
     restart: always
     ports:
       - "8081:8081"
-    logging:
-      driver: none
   rabbitmq:
     image: "rabbitmq:management"
     expose:
@@ -28,7 +27,8 @@ services:
       - mongo
       - rabbitmq
     volumes:
-      - ./scriptoria/src/assets/omr_files:/omr_files      
+      - ./scriptoria/src/assets/omr_files:/omr_files
+      - ./logs:/logs
     command:  sh -c "./wait && ./bash_scripts/docker_start.sh"
     tty: true
     privileged: true

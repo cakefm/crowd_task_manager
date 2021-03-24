@@ -25,7 +25,7 @@ do
     stem=$(echo $bname | cut -d. -f1)
     echo Starting $stem...
     cd $dname
-    screen -L -Logfile "${bname}.log" -dm -S $stem python3 $bname
+    screen -L -Logfile "/logs/${bname}.log" -dm -S $stem python3 $bname
 done
 
 # Module to view screen of after start-up
