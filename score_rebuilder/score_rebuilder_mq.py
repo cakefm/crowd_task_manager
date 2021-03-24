@@ -33,6 +33,7 @@ def callback(ch, method, properties, body):
     aggregated_result = db[cfg.col_aggregated_result].find_one({"task_id": task_id, "step": task["step"]})
 
     if aggregated_result:
+        print(f"Rebuilding score {sheet_name} with results from task {task_id}")
         aggregated_xml = aggregated_result["result"]
 
         # Temporary solution: give the slice somewhat more context by inserting only the header of the previous measure into it
