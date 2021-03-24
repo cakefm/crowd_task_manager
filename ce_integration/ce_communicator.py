@@ -67,8 +67,7 @@ def store_sheet(source, filename, potentialActionIdentifier, DigitalDocument_id,
         print("url retrieve end")
 
         # create entry into database
-        myclient = pymongo.MongoClient(MONGO_SERVER.ip, MONGO_SERVER.port)
-        mydb = myclient[MONGO_DB]
+
         mycol = mydb[cfg.col_sheet]
 
         result = {
@@ -96,8 +95,6 @@ def poll_controlactions():
     # print(response.text)
     json_object = json.loads(response.text)
     # check of there are any new controlactions
-    myclient = pymongo.MongoClient(MONGO_SERVER.ip, MONGO_SERVER.port)
-    mydb = myclient[MONGO_DB]
     mycol = mydb[cfg.col_sheet]
     myquery = {"controlaction_id": {"$exists": True}}
     mydoc = mycol.find(myquery)
@@ -182,8 +179,6 @@ def update_control_action_status(identifier, action_status):
     # FailedActionStatus,
     # PotentialActionStatus
 
-    myclient = pymongo.MongoClient(MONGO_SERVER.ip, MONGO_SERVER.port)
-    mydb = myclient[MONGO_DB]
     mycol = mydb[cfg.col_submitted_task]
 
     entry = mycol.find_one({"task_id": identifier, "digitaldocument_id": {"$exists": True} })
@@ -196,8 +191,6 @@ def update_control_action_status(identifier, action_status):
     print(response.text)
 
 def create_task_group(score_name, name, title):
-    myclient = pymongo.MongoClient(MONGO_SERVER.ip, MONGO_SERVER.port)
-    mydb = myclient[MONGO_DB]
     mycol = mydb[cfg.col_sheet]
     query = {'name': score_name}
     result = mycol.find_one(query)
@@ -236,9 +229,6 @@ def create_task_group(score_name, name, title):
     # return ce_id
 
 def create_task(task_id, task_type):
-    myclient = pymongo.MongoClient(MONGO_SERVER.ip, MONGO_SERVER.port)
-    mydb = myclient[MONGO_DB]
-    
     mycol = mydb[cfg.col_task]
     query = {'_id': ObjectId(task_id)}
     result = mycol.find_one(query)
@@ -286,9 +276,6 @@ def create_task(task_id, task_type):
     response = requests.request("POST", url, data=payload, headers=headers)
 
 def update_task_group(score_name, task_type, mei_url, action_status):
-    myclient = pymongo.MongoClient(MONGO_SERVER.ip, MONGO_SERVER.port)
-    mydb = myclient[MONGO_DB]
-
     mycol = mydb["ce_taskgroups"]
     query = {'score_name': score_name, 'name': task_type}
     result = mycol.find_one(query)
@@ -404,4 +391,6 @@ def main():
 
 
 if __name__ == "__main__":
+    myclient = pymongo.MongoClient(MONGO_SERVER.ip, MONGO_SERVER.port)
+    mydb = myclient[MONGO_DB]
     main()

@@ -22,8 +22,6 @@ def callback(ch, method, properties, body):
     partial_file_names = data['partials']
 
     # Get sheet id (for status queue)
-    client = MongoClient(cfg.mongodb_address.ip, int(cfg.mongodb_address.port))
-    db = client[cfg.db_name]
     sheet_id = str(db[cfg.col_sheet].find_one({"name" : sheet_name})["_id"])
 
     whole_dir = fsm.get_sheet_whole_directory(sheet_name)
@@ -73,6 +71,9 @@ channel = connection.channel()
 
 channel.queue_declare(queue=cfg.mq_aligner)
 channel.basic_consume(queue=cfg.mq_aligner, on_message_callback=callback, auto_ack=True)
+
+client = MongoClient(cfg.mongodb_address.ip, int(cfg.mongodb_address.port))
+db = client[cfg.db_name]
 
 print('XML aligner is listening...')
 channel.start_consuming()

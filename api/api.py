@@ -53,8 +53,6 @@ app.config['UPLOAD_FOLDER'] = str(Path.home() / cfg.upload_folder)
 # display all the tasks
 @app.route('/index')
 def index():
-    myclient = pymongo.MongoClient(MONGO_SERVER.ip, MONGO_SERVER.port)
-    mydb = myclient[MONGO_DB]
     mycol = mydb[cfg.col_submitted_task]
     myquery = {}
     mydoc = mycol.find(myquery)
@@ -66,8 +64,6 @@ def index():
 
 @app.route('/tasks', methods=['GET'])
 def get_tasks():
-    myclient = pymongo.MongoClient(MONGO_SERVER.ip, MONGO_SERVER.port)
-    mydb = myclient[MONGO_DB]
     mycol = mydb[cfg.col_task]
     myquery = {}
     mydoc = mycol.find(myquery)
@@ -83,8 +79,6 @@ def get_tasks():
 
 @app.route('/tasks/<variable>', methods=['GET'])
 def get_task_query(variable):
-    myclient = pymongo.MongoClient(MONGO_SERVER.ip, MONGO_SERVER.port)
-    mydb = myclient[MONGO_DB]
     mycol = mydb[cfg.col_task]
     myquery = {"_id": ObjectId(variable)}
     mydoc = mycol.find_one(myquery)
@@ -96,8 +90,6 @@ def get_task_query(variable):
 # display task info, slice, and xml
 @app.route('/edit/<variable>', methods=['GET'])
 def task(variable):
-    myclient = pymongo.MongoClient(MONGO_SERVER.ip, MONGO_SERVER.port)
-    mydb = myclient[MONGO_DB]
     mycol = mydb[TASK_COLL]
     myquery = {"_id": ObjectId(variable)}
     mydoc = mycol.find(myquery)
@@ -111,8 +103,6 @@ def task(variable):
 # display task info, slice, and xml
 @app.route('/verify/<variable>', methods=['GET'])
 def task_verify(variable):
-    myclient = pymongo.MongoClient(MONGO_SERVER.ip, MONGO_SERVER.port)
-    mydb = myclient[MONGO_DB]
     mycol = mydb[TASK_COLL]
     myquery = {"_id": ObjectId(variable)}
     mydoc = mycol.find(myquery)
@@ -126,8 +116,6 @@ def task_verify(variable):
 # getxml data
 @app.route('/xml/<variable>', methods=['GET'])
 def task_xml(variable):
-    myclient = pymongo.MongoClient(MONGO_SERVER.ip, MONGO_SERVER.port)
-    mydb = myclient[MONGO_DB]
     mycol = mydb[TASK_COLL]
     myquery = {"_id": ObjectId(variable)}
     mydoc = mycol.find(myquery)
@@ -143,8 +131,6 @@ def task_xml(variable):
 # receive xml data
 @app.route('/<variable>', methods=['POST'])
 def taskpost(variable):
-    myclient = pymongo.MongoClient(*MONGO_SERVER)
-    mydb = myclient[MONGO_DB]
     mycol = mydb[cfg.col_result]
     task = mydb[cfg.col_task].find_one({"_id": ObjectId(variable)})
     opinion = 'xml' if 'v' not in request.args else (request.args['v'] == "1")
@@ -291,8 +277,6 @@ def taskpost(variable):
 # display list of completed sheets
 @app.route('/results', methods=['GET'])
 def index_sheets():
-    myclient = pymongo.MongoClient(MONGO_SERVER.ip, MONGO_SERVER.port)
-    mydb = myclient[MONGO_DB]
     mycol = mydb[cfg.col_aggregated_result]
     myquery = {}
     mydoc = mycol.find(myquery)
@@ -305,8 +289,6 @@ def index_sheets():
 # display aggregated task results
 @app.route('/results/<variable>', methods=['GET'])
 def show_sheet(variable):
-    myclient = pymongo.MongoClient(MONGO_SERVER.ip, MONGO_SERVER.port)
-    mydb = myclient[MONGO_DB]
     mycol = mydb[cfg.col_aggregated_result]
     myquery = {"_id": ObjectId(variable)}
     mydoc = mycol.find(myquery)
@@ -319,8 +301,7 @@ def show_sheet(variable):
 # display aggregated task results
 @app.route('/context/<variable>', methods=['GET'])
 def show_page_context(variable):
-    myclient = pymongo.MongoClient(MONGO_SERVER.ip, MONGO_SERVER.port)
-    mydb = myclient[MONGO_DB]
+
     mycol = mydb[cfg.col_task_context]
     myquery = {"task_id": ObjectId(variable)}
     mydoc = mycol.find_one(myquery)
@@ -399,8 +380,6 @@ def upload_sheet():
                 os.chown(mei_path, uid, gid)
 
             # create entry into database
-            myclient = pymongo.MongoClient(MONGO_SERVER.ip, MONGO_SERVER.port)
-            mydb = myclient[MONGO_DB]
             mycol = mydb[cfg.col_sheet]
             # copy file to omr_files
             data_folder_temp = Path(UPLOAD_FOLDER_TEMP)
@@ -484,8 +463,6 @@ def download_from_url():
             os.chown(sheet_path, uid, gid)
 
             # create entry into database
-            myclient = pymongo.MongoClient(MONGO_SERVER.ip, MONGO_SERVER.port)
-            mydb = myclient[MONGO_DB]
             mycol = mydb[cfg.col_sheet]
             # copy file to omr_files
             data_folder_temp = Path(UPLOAD_FOLDER_TEMP)
@@ -532,8 +509,6 @@ def download_from_url():
 
 @app.route('/tasks', methods=['GET'])
 def list_tasks():
-    myclient = pymongo.MongoClient(MONGO_SERVER.ip, MONGO_SERVER.port)
-    mydb = myclient[MONGO_DB]
     mycol = mydb['tasks_test2']
     myquery = {}
     mydoc = mycol.find(myquery)
@@ -554,8 +529,6 @@ def list_tasks():
 
 @app.route('/tasks/<variable>', methods=['GET'])
 def get_task(variable):
-    myclient = pymongo.MongoClient(MONGO_SERVER.ip, MONGO_SERVER.port)
-    mydb = myclient[MONGO_DB]
     mycol = mydb['tasks_test2']
     myquery = {"_id": ObjectId(variable)}
     mydoc = mycol.find_one(myquery)
@@ -568,6 +541,8 @@ def get_task(variable):
     return jsonify(result)
 
 if __name__ == "__main__":
+    myclient = pymongo.MongoClient(*MONGO_SERVER)
+    mydb = myclient[MONGO_DB]
     app.debug = True
     print('in the main')
     api_port = 443 if 'API_PORT' not in os.environ else int(os.environ['API_PORT'])

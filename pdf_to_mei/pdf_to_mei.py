@@ -19,11 +19,6 @@ def callback(channel, method, properties, body):
     data = json.loads(body)
     pdf_id = data['_id']
 
-    # Initiate mongo client and sheet collection
-    client = MongoClient(
-        cfg.mongodb_address.ip,
-        cfg.mongodb_address.port)
-    db = client[cfg.db_name]
     sheet_collection = db[cfg.col_sheet]
 
     # Get PDF sheet entry
@@ -86,6 +81,10 @@ def callback(channel, method, properties, body):
 
 
 if __name__ == "__main__":
+    client = MongoClient(
+        cfg.mongodb_address.ip,
+        cfg.mongodb_address.port)
+    db = client[cfg.db_name]
     connection = pika.BlockingConnection(pika.ConnectionParameters(
         cfg.rabbitmq_address.ip,
         cfg.rabbitmq_address.port

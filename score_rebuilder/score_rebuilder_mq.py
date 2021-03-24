@@ -19,9 +19,6 @@ def callback(ch, method, properties, body):
     sheet_name = data['name']
     task_id = data['task_id']
 
-    client = MongoClient(cfg.mongodb_address.ip, cfg.mongodb_address.port)
-    db = client[cfg.db_name]
-
     # Get MEI file and measures
     mei_path = fsm.get_sheet_whole_directory(sheet_name) / "aligned.mei"
     mei_xml_tree = xml.parse(str(mei_path))
@@ -81,6 +78,10 @@ connection = pika.BlockingConnection(pika.ConnectionParameters(address.ip, addre
 channel = connection.channel()
 channel.queue_declare(queue=cfg.mq_score_rebuilder)
 channel.basic_consume(queue=cfg.mq_score_rebuilder, on_message_callback=callback, auto_ack=True)
+
+
+client = MongoClient(cfg.mongodb_address.ip, cfg.mongodb_address.port)
+db = client[cfg.db_name]
 
 print('Score rebuilder is listening...')
 channel.start_consuming()

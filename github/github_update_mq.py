@@ -22,8 +22,6 @@ def callback(ch, method, properties, body):
     action = data['action']
 
     # Get sheet id
-    client = MongoClient(cfg.mongodb_address.ip, cfg.mongodb_address.port)
-    db = client[cfg.db_name]
     sheet_id = str(db[cfg.col_sheet].find_one({"name" : sheet_name})["_id"])
 
     # Get task info
@@ -97,5 +95,9 @@ connection = pika.BlockingConnection(pika.ConnectionParameters(address.ip, addre
 channel = connection.channel()
 channel.queue_declare(queue=cfg.mq_github)
 channel.basic_consume(queue=cfg.mq_github, on_message_callback=callback, auto_ack=True)
+
+client = MongoClient(cfg.mongodb_address.ip, cfg.mongodb_address.port)
+db = client[cfg.db_name]   
+
 print('Github repository update module is listening...')
 channel.start_consuming()

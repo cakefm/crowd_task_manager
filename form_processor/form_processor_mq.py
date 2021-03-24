@@ -17,9 +17,6 @@ def callback(ch, method, properties, body):
     sheet_name = data['name']
     task_id = data['task_id']
 
-    client = MongoClient(*cfg.mongodb_address)
-    db = client[cfg.db_name]
-
     # Obtain corresponding task and slice
     task = db[cfg.col_task].find_one({"_id" : ObjectId(task_id)})
 
@@ -56,5 +53,8 @@ channel = connection.channel()
 channel.queue_declare(queue=cfg.mq_form_processor)
 channel.basic_consume(queue=cfg.mq_form_processor, on_message_callback=callback, auto_ack=True)
 
-print('Score rebuilder is listening...')
+client = MongoClient(*cfg.mongodb_address)
+db = client[cfg.db_name]
+
+print('Form processor is listening...')
 channel.start_consuming()

@@ -17,6 +17,9 @@ connection = pika.BlockingConnection(pika.ConnectionParameters(address.ip, addre
 channel = connection.channel()
 channel.queue_declare(queue=cfg.mq_slicer)
 
+client = MongoClient(cfg.mongodb_address.ip, cfg.mongodb_address.port)
+db = client[cfg.db_name]
+
 def callback(ch, method, properties, body):
     data = json.loads(body)
     name = data['name']
@@ -29,8 +32,6 @@ def callback(ch, method, properties, body):
     line_path = out_path / "lines" 
     double_measure_path = out_path / "double_measures"
 
-    client = MongoClient(cfg.mongodb_address.ip, cfg.mongodb_address.port)
-    db = client[cfg.db_name]
 
     # First clear all documents under this score name (which acts as key in our case)
     db[cfg.col_slice].delete_many({"score": score.name})

@@ -14,9 +14,6 @@ from bson.objectid import ObjectId
 
 
 def callback(ch, method, properties, body):
-    client = MongoClient(*cfg.mongodb_address)
-    db = client[cfg.db_name]
-
     data = json.loads(body)
     task_id = data['task_id']
     task = db[cfg.col_task].find_one({"_id": ObjectId(task_id)})
@@ -65,6 +62,9 @@ connection = pika.BlockingConnection(pika.ConnectionParameters(address.ip, addre
 channel = connection.channel()
 channel.queue_declare(queue=cfg.mq_aggregator_xml)
 channel.basic_consume(queue=cfg.mq_aggregator_xml, on_message_callback=callback, auto_ack=True)
+
+client = MongoClient(*cfg.mongodb_address)
+db = client[cfg.db_name]
 
 print('XML aggregator is listening...')
 channel.start_consuming()
