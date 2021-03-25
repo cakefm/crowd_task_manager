@@ -151,6 +151,7 @@ class Score:
         line = []
         page = []
         entries = [x for x in self.mei.getElementsByTagName("section")[0].childNodes if x.nodeType==xml.Node.ELEMENT_NODE]
+
         skipped_first_page_tag = False
         accumulated_score_def = self.mei.getElementsByTagName("scoreDef")[0]  # The initial one
         last_score_def_index = -1
@@ -255,6 +256,7 @@ class Score:
         section.appendChild(tt.create_element_node("PUT_TASK_XML_HERE"))
         return context
 
+
     # TODO: Breaks when clef is in measure instead of staff, will not be the case for now
     def update_score_def_with_clef(self, score_def, clef, n):
         initial_staff_defs = score_def.getElementsByTagName("staffDef")
@@ -268,7 +270,7 @@ class Score:
                     staff_def.setAttribute("clef.line", clef_line)
 
     def update_score_def_with_score_def(self, score_def, new_score_def):
-        attributes = ["key.mode", "key.sig", "meter.unit", "meter.count", "clef.size", "clef.shape"]
+        attributes = ["key.mode", "key.sig", "meter.sym", "meter.unit", "meter.count", "clef.size", "clef.shape"]
         staff_defs = score_def.getElementsByTagName("staffDef")
         new_staff_defs = new_score_def.getElementsByTagName("staffDef")
 
