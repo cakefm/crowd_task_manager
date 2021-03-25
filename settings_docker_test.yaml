@@ -36,6 +36,7 @@ mq_ce_communicator: "ce_communicator_queue"
 mq_aligner: "aligner_queue"
 mq_form_processor: "form_processor_queue"
 mq_task_passthrough: "task_passthrough_queue"
+mq_post_processing: "post_processing_queue"
 
 # Paths
 upload_folder|path: "/omr_files/"

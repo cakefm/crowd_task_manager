@@ -108,7 +108,7 @@ def take_action_on_status(channel, method, properties, body):
 
     whitelist = ["task_scheduler", "github_update"]
     if task["step"] == DONE_STEP and module not in whitelist:
-        print(f"WARNING: Got message after {task_id} was done already from {module}, cancelling")
+        print(f"WARNING: Got message after {task_id} was done already from {module}, ignoring")
         # Might be redundant to return here..
         return
 
@@ -154,10 +154,13 @@ def take_action_on_status(channel, method, properties, body):
         ("task_scheduler", "complete"):             [
                                                         submit_ce_task_completed,
                                                         submit_next_batch,
-                                                        check_task_type_completion,
-                                                        check_stage_completion
+                                                        check_task_type_completion
                                                     ],
         ("github_update", "complete"):              [
+                                                    ],
+        ("post_processing", "complete"):            [
+                                                        github_commit,
+                                                        check_stage_completion
                                                     ],
         ("github_update", "failed"):                [
                                                     ]
@@ -329,6 +332,17 @@ def check_task_type_completion(message, channel):
         db[cfg.col_campaign_status].update_one(
             {"score_name": score_name},
             {"$addToSet": {"task_types_done": task_type.name}}
+        )
+
+        # Send to post processor
+        send_message(
+            {
+                'task_id': task_id,
+                'steps': task_type.post_processing,
+                'name': score_name
+            },
+            cfg.mq_post_processing,
+            channel
         )
 
         # Let OMRP know we just finished a task type

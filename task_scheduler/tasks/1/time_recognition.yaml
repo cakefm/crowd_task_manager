@@ -8,3 +8,5 @@ steps:                            # Ordered steps for this task, each step has a
 prioritization: page_order
 slice_type: "measures:1"          # Any of: measures, lines, pages. Add ':' with a number behind to specify specific tuples (e.g. add ':2' to only match double measures)
 slice_selector: "all_slices"
+
+post_processing: []

@@ -18,11 +18,7 @@ error_chance = 0.0
 
 task_set = set()
 
-def first_or_none(tree, tag, condition = None):
-    elements = tree.getElementsByTagName(tag)
-    if condition:
-        elements = [e for e in elements if condition(e)]
-    return None if not len(elements) else elements[0]
+
 
 def set_attributes(node, attributes):
     for attr in attributes:
@@ -37,23 +33,23 @@ def randomize_clef(tree):
         {}
     ])
     set_attributes(clef, choice)
-    first_or_none(tree, "layer").appendChild(clef)
+    tt.first_or_none(tree, "layer").appendChild(clef)
     return tree.toxml()
 
 def randomize_key(tree):
-    measure = first_or_none(tree, "measure")
-    n = first_or_none(tree, "staff").getAttribute("n")
-    scoreDef = first_or_none(tree, "scoreDef")
+    measure = tt.first_or_none(tree, "measure")
+    n = tt.first_or_none(tree, "staff").getAttribute("n")
+    scoreDef = tt.first_or_none(tree, "scoreDef")
     if not scoreDef:
         scoreDef = tt.create_element_node("scoreDef")
         tree.insertBefore(scoreDef, measure)
 
-    staffGrp = first_or_none(scoreDef, "staffGrp")
+    staffGrp = tt.first_or_none(scoreDef, "staffGrp")
     if not staffGrp:
         staffGrp = tt.create_element_node("staffGrp")
         scoreDef.appendChild(staffGrp)
 
-    staffDef = first_or_none(staffGrp, "staffDef", lambda e: e.getAttribute("n") == n)
+    staffDef = tt.first_or_none(staffGrp, "staffDef", lambda e: e.getAttribute("n") == n)
     if not staffDef:
         staffDef = tt.create_element_node("staffDef", {"n": n})
         staffGrp.appendChild(staffDef)
@@ -71,19 +67,19 @@ def randomize_key(tree):
 
 
 def randomize_time(tree):
-    measure = first_or_none(tree, "measure")
-    n = first_or_none(tree, "staff").getAttribute("n")
-    scoreDef = first_or_none(tree, "scoreDef")
+    measure = tt.first_or_none(tree, "measure")
+    n = tt.first_or_none(tree, "staff").getAttribute("n")
+    scoreDef = tt.first_or_none(tree, "scoreDef")
     if not scoreDef:
         scoreDef = tt.create_element_node("scoreDef")
         tree.insertBefore(scoreDef, measure)
 
-    staffGrp = first_or_none(scoreDef, "staffGrp")
+    staffGrp = tt.first_or_none(scoreDef, "staffGrp")
     if not staffGrp:
         staffGrp = tt.create_element_node("staffGrp")
         scoreDef.appendChild(staffGrp)
 
-    staffDef = first_or_none(staffGrp, "staffDef", lambda e: e.getAttribute("n") == n)
+    staffDef = tt.first_or_none(staffGrp, "staffDef", lambda e: e.getAttribute("n") == n)
     if not staffDef:
         staffDef = tt.create_element_node("staffDef", {"n": n})
         staffGrp.appendChild(staffDef)
@@ -100,7 +96,7 @@ def randomize_time(tree):
 
 def randomize_note(tree):
     note_count = rnd.randint(8)
-    layer = first_or_none(tree, "layer")
+    layer = tt.first_or_none(tree, "layer")
     for i in range(note_count):
         element = tt.create_element_node(
             rnd.choice(["note", "rest"]), 
@@ -174,7 +170,7 @@ def callback(channel, method, properties, body):
             payload = payload_func(tree)
         requests.post(f"http://localhost:443/{task['_id']}", data=payload)
         print(f"Sending response to API for task {task_id} (count {1 + i})")
-        for j in range(6): # Putting this to >0 will simulate delay in response
+        for j in range(2): # Putting this to >0 will simulate delay in response
             connection.process_data_events()
             time.sleep(0.1 + 0.1 * rnd.random())
 

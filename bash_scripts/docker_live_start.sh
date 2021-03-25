@@ -14,6 +14,7 @@ declare -a modules=(
     "form_processor/form_processor_mq.py"
     "github/github_init_mq.py"
     "github/github_update_mq.py"
+    "post_processing/post_processing_mq.py"
     "api/api.py"
     "ce_integration/ce_communicator.py"
 )

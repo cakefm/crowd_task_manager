@@ -12,6 +12,7 @@ declare -a modules=(
     "aggregator/aggregator_form_mq.py"
     "score_rebuilder/score_rebuilder_mq.py"
     "form_processor/form_processor_mq.py"
+    "post_processing/post_processing_mq.py"
     "api/api.py"
     "task_scheduler/task_passthrough.py"
 )

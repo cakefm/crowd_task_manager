@@ -21,6 +21,7 @@ class TaskType():
         self.get_task_priority = getattr(priority_functions, body["prioritization"])
         self.steps = OrderedDict({x["name"]: x for x in body["steps"]})
         self.slice_type = body["slice_type"]
+        self.post_processing = body["post_processing"]
         self.slice_tuple_size = 0  # matches all sizes
         if ":" in self.slice_type:
             self.slice_type, slice_tuple_size = self.slice_type.split(":")
@@ -51,7 +52,8 @@ class TaskType():
     def to_db_dict(self):
         return {
             "name": self.name,
-            "steps": dict(self.steps)
+            "steps": dict(self.steps),
+            "post_processing": self.post_processing
         }
 
     def __repr__(self):

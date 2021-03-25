@@ -64,6 +64,13 @@ def node_type_filter(node_type):
     '''
     return lambda node : node.nodeType == node_type
 
+
+def first_or_none(tree, tag, condition = None):
+    elements = tree.getElementsByTagName(tag)
+    if condition:
+        elements = [e for e in elements if condition(e)]
+    return None if not len(elements) else elements[0]
+
 def purge_non_element_nodes(tree):
     '''
     Purges all non-element nodes from the given (sub) tree. It does not edit the tree
