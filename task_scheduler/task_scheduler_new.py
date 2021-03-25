@@ -106,7 +106,7 @@ def take_action_on_status(channel, method, properties, body):
         print("Task did not exist:", task_id)
         return
 
-    whitelist = ["task_scheduler", "github_update"]
+    whitelist = ["task_scheduler", "github_update", "post_processing"]
     if task["step"] == DONE_STEP and module not in whitelist:
         print(f"WARNING: Got message after {task_id} was done already from {module}, ignoring")
         # Might be redundant to return here..
