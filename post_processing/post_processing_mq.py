@@ -64,8 +64,8 @@ def callback(ch, method, properties, body):
                     staffDef = tt.create_element_node("staffDef", {"n": staff.getAttribute("n")})
                     staffGrp.appendChild(staffDef)
 
-                staffDef.setAttribute("clef_line", clef_line)
-                staffDef.setAttribute("clef_shape", clef_shape)
+                staffDef.setAttribute("clef.line", clef_line)
+                staffDef.setAttribute("clef.shape", clef_shape)
 
     # Write MEI file if there were changes
     if post_processing_steps:

@@ -26,8 +26,13 @@ def callback(ch, method, properties, body):
 
     # Get task info
     task = db[cfg.col_task].find_one(ObjectId(task_id))
-    task_name = task["name"]
-    task_type = task["type"]
+
+    # TODO: solve this more nicely (don't delete tasks between stages, or include this info in mq message)
+    task_name = "None"
+    task_type = "None"
+    if task:
+        task_name = task["name"]
+        task_type = task["type"]
 
     # # Github
     # github = Github(cfg.github_token)
