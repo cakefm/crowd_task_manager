@@ -280,6 +280,19 @@ class Score:
             if value:
                 score_def.setAttribute(attr, value)
 
+            for new_staff_def in new_staff_defs:
+                value = new_staff_def.getAttribute(attr)
+                n = new_staff_def.getAttribute("n")
+                if value:
+                    found = False
+                    for old_staff_def in staff_defs:
+                        if old_staff_def.getAttribute("n") == n:
+                            old_staff_def.setAttribute(attr, value)
+                            found = True
+                            break
+                    if not found:
+                        score_def.appendChild(tt.create_element_node("staffDef", {"n": n, attr: value}))
+
             for old_staff_def, new_staff_def in tt.matching_pairs(staff_defs, new_staff_defs, ["n"]):
                 value = new_staff_def.getAttribute(attr)
                 if value:
