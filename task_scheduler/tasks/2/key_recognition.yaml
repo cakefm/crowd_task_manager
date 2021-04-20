@@ -3,7 +3,7 @@ name: "Key Recognition"           # "Nice" name for this task type
 steps:                            # Ordered steps for this task, each step has a 'name' and 'requirements'
 - name: edit
   requirements : []               # List of UI requirements for this task step
-  min_responses: 1                # Minimum amount of responses needed before *something* will happen
+  min_responses: 2                # Minimum amount of responses needed before *something* will happen
   result_type: "xml"              # Type of result, either of: xml, form
 prioritization: page_order
 slice_type: "measures:1"          # Any of: measures, lines, pages. Add ':' with a number behind to specify specific tuples (e.g. add ':2' to only match double measures)
