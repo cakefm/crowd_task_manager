@@ -4,6 +4,7 @@ import json
 import sys
 import os
 import shutil
+import datetime
 sys.path.append("..")
 from common.settings import cfg
 import common.file_system_manager as fsm
@@ -175,7 +176,7 @@ def take_action_on_status(channel, method, properties, body):
 def submit_ce_task_completed(message, channel):
     task_id = message["_id"]
     task = get_task(task_id)
-
+    print(datetime.datetime.now(), f"task completed {task_id} of {task['type']}")
     send_message(
         {
             "action": "task completed",
@@ -211,6 +212,7 @@ def republish_ce_task(task, channel):
 def increment_responses_needed(message, channel):
     task_id = message["_id"]
     task = get_task(task_id)
+    print(datetime.datetime.now(), f"failed aggregation for task {task_id} of {task['type']}")
     new_responses_needed = task["responses_needed"] + 1
     db[cfg.col_task].update_one({"_id": ObjectId(task_id)}, {"$set": {"responses_needed": new_responses_needed}})
 

@@ -4,6 +4,7 @@ import shutil
 import pika
 import json
 import gc
+import datetime
 
 from github import Github
 from pymongo import MongoClient
@@ -60,6 +61,7 @@ def callback(ch, method, properties, body):
             with open(str(git_mei_path), 'r') as mei_file:
                 if mei_file.read() == mei_data:
                     changed = False
+                    print(datetime.datetime.now(), f"no changes for {task_id} of {task_type}")
 
             if (cfg.only_commit_if_changed and changed) or not cfg.only_commit_if_changed:
                 # Copy over new MEI
