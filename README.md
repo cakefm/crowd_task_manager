@@ -20,5 +20,7 @@ In its current state, the system is optimized for a crowd-assisted Optical Music
 1. If you plan to also run the front-end [scriptoria](https://github.com/cakefm/scriptoria/tree/refactor/components), clone it into a `scriptoria` folder in the root of this repository
 2. Run `start_local.sh`, it will set up and start the docker containers automatically
 
+In case you get an error about file sharing, please consult [this](https://stackoverflow.com/questions/60754297/docker-compose-failed-to-build-filesharing-has-been-cancelled) thread.
+
 ## Future Work
 There's a lot to still be done. To make this a little bit easier, issues have been made tagged with Future Work labels, in case anyone wants to carry on the torch. A couple of these might involve large refactors.
