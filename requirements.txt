@@ -21,7 +21,7 @@ pycparser==2.19
 pygit2==1.0.2
 PyGithub==1.46
 pygobject==3.26.1
-PyJWT==1.7.1
+PyJWT==2.4.0
 pymongo==3.10.1
 pyOpenSSL==19.1.0
 PyYAML==5.3
